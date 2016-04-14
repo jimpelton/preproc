@@ -9,8 +9,8 @@
 
 #include <glm/glm.hpp>
 
-//#include <thrust/host_vector.h>
-//#include <thrust/extrema.h>
+#include <thrust/host_vector.h>
+#include <thrust/extrema.h>
 
 #include <fstream>
 #include <iostream>
@@ -274,26 +274,34 @@ BlockCollection2<Ty>::computeVolumeStatistics(BufferedReader<Ty> &r)
   r.reset();
   const Ty *ptr = r.buffer_ptr();
 
-//  thrust::host_vector<Ty> h_vec;
-//  h_vec.reserve(r.bufferSizeElements());
+  thrust::host_vector<Ty> h_vec;
+  h_vec.reserve(r.bufferSizeElements());
 
   while(r.hasNextFill()) {
+    std::cerr << "Filling buffer.\n";
     size_t elems = r.fillBuffer();
-//    m_volAvg += sum;
-//    m_volMin = std::min<decltype(m_volMin)>(m_volMin, minmax.first);
-//    m_volMax = std::max<decltype(m_volMax)>(m_v
-    //auto start = std::begin(r.buffer_ptr());
-//    h_vec.assign(ptr, ptr+elems);
 
-//    thrust::pair<Ty, Ty> minmax = thrust::minmax_element(h_vec.begin(), h_vec.end());
-//    auto sum = thrust::reduce(h_vec.begin(), h_vec.end());olMax, minmax.second);
+    std::cerr << "Assigning buffer.\n";
+    h_vec.assign(ptr, ptr+elems);
 
-    for (size_t col{ 0 }; col < elems; ++col) {
-      Ty val{ ptr[col] };
-      m_volMin = std::min<decltype(m_volMin)>(m_volMin, val);
-      m_volMax = std::max<decltype(m_volMax)>(m_volMax, val);
-      m_volAvg  += static_cast<decltype(m_volAvg)>(val);
-    }
+    std::cerr << "Find min max.\n";
+    auto minmax =
+      thrust::minmax_element(h_vec.begin(), h_vec.end());
+
+    std::cerr << "Find min max.\n";
+    auto sum = thrust::reduce(h_vec.begin(), h_vec.end());
+
+    m_volAvg += sum;
+    m_volMin = std::min<decltype(m_volMin)>(m_volMin, *(minmax.first));
+    m_volMax = std::max<decltype(m_volMax)>(m_volMax, *(minmax.second));
+
+
+//    for (size_t col{ 0 }; col < elems; ++col) {
+//      Ty val{ ptr[col] };
+//      m_volMin = std::min<decltype(m_volMin)>(m_volMin, val);
+//      m_volMax = std::max<decltype(m_volMax)>(m_volMax, val);
+//      m_volAvg  += static_cast<decltype(m_volAvg)>(val);
+//    }
 
   }
 
@@ -402,7 +410,7 @@ BlockCollection2<Ty>::computeBlockStatistics(BufferedReader<Ty> &r)
     b->avg_val /= b->voxel_dims[0] * b->voxel_dims[1] * b->voxel_dims[2];
   }
 
-  std::cout << "\nDone computing block statistics.\n";
+  //std::cout << "\nDone computing block statistics.\n";
   Info() << "Done computing block statistics for " << m_blocks.size() << " blocks.";
 }
 
@@ -489,7 +497,7 @@ BlockCollection2<Ty>::filterBlocks
   }
 
   computeVolumeStatistics(r);
-  computeBlockStatistics(r);
+  //computeBlockStatistics(r);
 
   // total voxels per block
 //  size_t numvox{ m_blockDims.x*m_blockDims.y*m_blockDims.z };

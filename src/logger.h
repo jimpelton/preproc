@@ -25,6 +25,7 @@ public:
   {
     if (s_instance == nullptr) {
       s_instance = new logger();
+      s_instance->do_log("Logger initialized.");
     }
 
     s_instance->m_level = level;
@@ -36,7 +37,16 @@ public:
   /////////////////////////////////////////////////////////////////////////////
   static void shutdown()
   {
+    get().do_log("Shutdown logger.");
     delete s_instance;
+  }
+
+  /////////////////////////////////////////////////////////////////////////////
+  logger&
+  start_line()
+  {
+    *m_out << "\n- " << now() << " " << m_levelString << ":\t";
+    return *this;
   }
 
   /////////////////////////////////////////////////////////////////////////////
@@ -44,7 +54,6 @@ public:
   logger&
   do_log(T t)
   {
-    *m_out << "- " << now() << " " << m_levelString << ":\t";
     *m_out << t;
     return *this;
   }
@@ -52,11 +61,16 @@ public:
 
   ~logger()
   {
-    *m_out << std::endl;
+    *m_out << "\n";
+    m_out->flush();
 
     if (m_ownsStream) {
       delete m_out;
+      m_out = nullptr;
     }
+
+    s_instance = nullptr;
+
   }
 
 
@@ -107,16 +121,16 @@ private:   // members
 
 inline logger& Dbg()
 {
-  return logger::get(LogLevel::DEBUG);
+  return logger::get(LogLevel::DEBUG).start_line();
 }
 inline logger& Err()
 {
-  return logger::get(LogLevel::ERROR);
+  return logger::get(LogLevel::ERROR).start_line();
 }
 
 inline logger& Info()
 {
-  return logger::get(LogLevel::INFO);
+  return logger::get(LogLevel::INFO).start_line();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

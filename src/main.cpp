@@ -115,6 +115,7 @@ main(int argc, const char *argv[])
   CommandLineOptions clo;
   if (parseThem(argc, argv, clo) == 0) {
     Err() << "Command line parse error, exiting.";
+    preproc::logger::shutdown();
     exit(1);
   }
 
@@ -153,6 +154,7 @@ main(int argc, const char *argv[])
     break;
   }
 
+  preproc::logger::shutdown();
 
   return 0;
 }
