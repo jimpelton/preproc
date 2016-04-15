@@ -272,28 +272,27 @@ BlockCollection2<Ty>::computeVolumeStatistics(BufferedReader<Ty> &r)
 
 
   r.reset();
-  const Ty *ptr = r.buffer_ptr();
-
-  thrust::host_vector<Ty> h_vec;
-  h_vec.reserve(r.bufferSizeElements());
-
-  while(r.hasNextFill()) {
-    std::cerr << "Filling buffer.\n";
-    size_t elems = r.fillBuffer();
-
-    std::cerr << "Assigning buffer.\n";
-    h_vec.assign(ptr, ptr+elems);
-
-    std::cerr << "Find min max.\n";
-    auto minmax =
-      thrust::minmax_element(h_vec.begin(), h_vec.end());
-
-    std::cerr << "Find min max.\n";
-    auto sum = thrust::reduce(h_vec.begin(), h_vec.end());
-
-    m_volAvg += sum;
-    m_volMin = std::min<decltype(m_volMin)>(m_volMin, *(minmax.first));
-    m_volMax = std::max<decltype(m_volMax)>(m_volMax, *(minmax.second));
+//  const Ty *ptr = r.buffer_ptr();
+//  const thrust::host_vector<Ty> &buf = r.buffer();
+//
+////  thrust::host_vector<Ty> h_vec;
+////  h_vec.reserve(r.bufferSizeElements());
+//
+//  while(r.hasNextFill()) {
+//    std::cerr << "Filling buffer.\n";
+//    size_t elems = r.fillBuffer();
+//    std::cerr << "Read " << elems << " elements\n";
+//
+//    std::cerr << "Find min max.\n";
+//    auto minmax =
+//      thrust::minmax_element(buf.begin(), buf.begin()+elems);
+//
+//    std::cerr << "Reduce.\n";
+//    auto sum = thrust::reduce(buf.begin(), buf.begin()+elems);
+//
+//    m_volAvg += sum;
+//    m_volMin = std::min<decltype(m_volMin)>(m_volMin, *(minmax.first));
+//    m_volMax = std::max<decltype(m_volMax)>(m_volMax, *(minmax.second));
 
 
 //    for (size_t col{ 0 }; col < elems; ++col) {
@@ -303,7 +302,7 @@ BlockCollection2<Ty>::computeVolumeStatistics(BufferedReader<Ty> &r)
 //      m_volAvg  += static_cast<decltype(m_volAvg)>(val);
 //    }
 
-  }
+//  }
 
   m_volAvg /= m_volDims.x*m_volDims.y*m_volDims.z;
 
@@ -320,53 +319,54 @@ BlockCollection2<Ty>::computeBlockStatistics(BufferedReader<Ty> &r)
   Info() << "Computing block statistics for " << m_blocks.size() << " blocks.";
   r.reset();
 
-  const Ty *buf{ r.buffer_ptr() };
-
-  // voxel index within the entire volume
-  size_t vol_idx = 0;
-
-  // the 1D block index of current block
-  size_t blk_idx = 0;
-  FileBlock *currBlock{ m_blocks[blk_idx] };
-
-
-//  uint64_t dist_to_right_block_edge = currBlock->voxel_dims[0];
-//  uint64_t dist_to_bottom_block_edge = currBlock->voxel_dims[0];
-//  uint64_t block_edge = 0 + dist_to_right_block_edge;
-
-  while (r.hasNextFill()) {
-
-    // the number of voxels read last fill.
-    size_t voxels_read = r.fillBuffer();
-
-    if (voxels_read<=0) {
-      std::cout << "\nreadsz: " << voxels_read << " bytes." << std::endl;
-      break;
-    }
-
-    // loop through buffer
-    currBlock = m_blocks[blk_idx];
-    uint64_t voxelsInBlockRow{ currBlock->voxel_dims[0] };
-    size_t vox{ 0 };
-
-    for (; vox < voxelsInBlockRow; ++vox) {
-      Ty val{ buf[vox] };
-
-      currBlock->min_val = std::min<
-          decltype(currBlock->min_val)>(currBlock->min_val, val);
-
-      currBlock->max_val = std::max<
-          decltype(currBlock->max_val)>(currBlock->max_val, val);
-
-      currBlock->avg_val += vox;
-
-    }
-
-    //TODO: compute next block index
-
-    vol_idx += vox;
-
-  } // while(r.hasNext...
+//  const Ty *buf{ r.buffer_ptr() };
+//  const thrust::host_vector<Ty> &buf = r.buffer();
+//
+//  // voxel index within the entire volume
+//  size_t vol_idx = 0;
+//
+//  // the 1D block index of current block
+//  size_t blk_idx = 0;
+//  FileBlock *currBlock{ m_blocks[blk_idx] };
+//
+//
+////  uint64_t dist_to_right_block_edge = currBlock->voxel_dims[0];
+////  uint64_t dist_to_bottom_block_edge = currBlock->voxel_dims[0];
+////  uint64_t block_edge = 0 + dist_to_right_block_edge;
+//
+//  while (r.hasNextFill()) {
+//
+//    // the number of voxels read last fill.
+//    size_t voxels_read = r.fillBuffer();
+//
+//    if (voxels_read<=0) {
+//      std::cout << "\nreadsz: " << voxels_read << " bytes." << std::endl;
+//      break;
+//    }
+//
+//    // loop through buffer
+//    currBlock = m_blocks[blk_idx];
+//    uint64_t voxelsInBlockRow{ currBlock->voxel_dims[0] };
+//    size_t vox{ 0 };
+//
+//    for (; vox < voxelsInBlockRow; ++vox) {
+//      Ty val{ buf[vox] };
+//
+//      currBlock->min_val = std::min<
+//          decltype(currBlock->min_val)>(currBlock->min_val, val);
+//
+//      currBlock->max_val = std::max<
+//          decltype(currBlock->max_val)>(currBlock->max_val, val);
+//
+//      currBlock->avg_val += vox;
+//
+//    }
+//
+//    //TODO: compute next block index
+//
+//    vol_idx += vox;
+//
+//  } // while(r.hasNext...
 
 
     // Determine which block this voxel falls into:         //
