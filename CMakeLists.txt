@@ -22,29 +22,31 @@ if (WIN32)
 endif (WIN32)
 
 if (UNIX)
+    set(CMAKE_C_COMPILER "/usr/local/bin/clang-omp")
+    set(CMAKE_CXX_COMPILER "/usr/local/bin/clang-omp++")
+    set(CMAKE_AR "/usr/local/bin/ar")
+    set(CMAKE_RANLIB "/usr/local/bin/ranlib")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall \
     -Wno-missing-braces \
-    -fdiagnostics-color=auto -fopenmp \
+    -fopenmp \
+    -fdiagnostics-color=auto \
     -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP \
     -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP")
 endif (UNIX)
 
-###########################################################################
-# Compiler options for Clang
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    set_property( TARGET preprocessor APPEND_STRING PROPERTY COMPILE_FLAGS
-            #"-Weverything -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-documentation -Wno-missing-braces")
-            "-Wall -Wno-missing-braces")
-endif()
 
 
 #### T h i r d   P a r t y  ################################################
 find_package(GLM REQUIRED)
-find_package(CUDA QUIET REQUIRED)
+
+#find_package(CUDA QUIET REQUIRED)
 
 include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/tclap/include"
-    "${CUDA_INCLUDE_DIRS}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/thrust/"
+    "${GLM_INCLUDE_DIRS}"
+
+    #"${CUDA_INCLUDE_DIRS}"
 )
 
 
@@ -56,8 +58,16 @@ add_executable(
     "${preproc_SOURCES}"
 )
 
-link_directories("/opt/cuda/lib64/")
-target_link_libraries(preproc "gomp")
+#link_directories("/opt/cuda/lib64/")
+#target_link_libraries(preproc "gomp")
+
+###########################################################################
+# Compiler options for Clang
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    set_property( TARGET preproc APPEND_STRING PROPERTY COMPILE_FLAGS
+            #"-Weverything -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-documentation -Wno-missing-braces")
+            "-Wall -Wno-missing-braces")
+endif()
 
 # install(TARGETS crufterly ARCHIVE
 #         DESTINATION "lib/crufterly/static/${CMAKE_BUILD_TYPE}/")
