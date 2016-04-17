@@ -5,24 +5,26 @@
 #ifndef bufferedreader_h__
 #define bufferedreader_h__
 
+#include "logger.h"
+
+#include <thrust/host_vector.h>
+#include <thrust/pair.h>
 
 #include <fstream>
 #include <iostream>
 #include <vector>
 #include <algorithm>
 #include <stdexcept>
-#include <cassert>
-
-#include <thrust/host_vector.h>
 #include <thread>
 #include <mutex>
-
 #include <atomic>
 #include <condition_variable>
 #include <queue>
 
 namespace preproc
 {
+
+
 
 ///////////////////////////////////////////////////////////////////////////////
 /// \brief Read blocks of data
@@ -31,6 +33,10 @@ template<typename Ty>
 class BufferedReader
 {
 public:
+
+//  using ThrustNormalIter = thrust::detail::normal_iterator<Ty>;
+//  using BuffersPair = thrust::pair<ThrustNormalIter, ThrustNormalIter>;
+//  using BuffersQueue = std::queue<BuffersPair>;
 
   ////////////////////////////////////////////////////////////////////////////////
   BufferedReader(size_t bufSize, int numBuffers=2);
@@ -45,7 +51,7 @@ public:
   bool open(const std::string &path);
 
   bool start();
-  bool stop();
+  void stop();
 
   ///////////////////////////////////////////////////////////////////////////////
   /// \brief Fill the buffer with data.
@@ -66,49 +72,18 @@ public:
   void reset();
 
 
-  using ThrustNormalIter = thrust::detail::normal_iterator<Ty>;
-  using BuffersPair = thrust::pair<ThrustNormalIter, ThrustNormalIter>;
 
-  //////////////////////////////////////////////////////////////////////////////
-  /// \brief Get a begin/end iterator pair of the next buffer segment.
-  //////////////////////////////////////////////////////////////////////////////
-  BuffersPair
-  next()  {
-    m_mutex.lock();
-
-    auto rval = m_buffers.front();
-    m_buffers.pop();
-
-    m_mutex.unlock();
-
-    m_cv.notify_all();
-    return rval;
-  }
+  const thrust::host_vector<Ty>& next();
+  void giveback(const thrust::host_vector<Ty>&);
 
 
-  size_t bufferSizeElements() const
-  {
-    return m_buffer.size() / m_nBufs;
-  }
+  size_t bufferSizeElements() const;
 
 
-private:   // Methods
-
-  BuffersPair
-  makePair(int next, std::streampos gofor) {
-    return thrust::make_pair(
-        m_buffer.begin() + (next * bufferSizeElements()),
-        m_buffer.begin() + ((next * bufferSizeElements()) + gofor)
-    );
-  }
-
-
-private:   // Data members
-
-  thrust::host_vector<Ty> m_buffer;
-
-  using BuffersQueue = std::queue<thrust::pair<decltype(m_buffer.begin()), decltype(m_buffer.begin())>>;
-  BuffersQueue m_buffers;
+private:
+  std::vector<thrust::host_vector<Ty>> m_allBuffers;
+  std::queue<thrust::host_vector<Ty>*> m_emptyBuffers;
+  std::queue<thrust::host_vector<Ty>*> m_fullBuffers;
 
   int m_nBufs;
 
@@ -118,24 +93,81 @@ private:   // Data members
   std::ifstream *m_is;
   std::atomic<bool> m_stopReading;
 
+  class ReaderWorker;
+  ReaderWorker *worker;
   std::thread m_readThread;
-  std::mutex m_mutex;
-  std::mutex m_buffersMutex;
+  std::mutex m_emptyBuffersMutex;
+  std::mutex m_fullBuffersMutex;
+  std::mutex m_cvMutex;
   std::condition_variable_any m_cv;
 
-};  // class BufferedReader
+};
+
+
+
+class ReaderWorker
+{
+public:
+
+  template<typename Ty>
+  void
+  operator()(BufferedReader<Ty> *br)
+  {
+
+
+  }
+};
 
 
 ///////////////////////////////////////////////////////////////////////////////
 template<typename Ty>
-BufferedReader<Ty>::BufferedReader
-(
-  size_t bufSize,
-  int nbuf
-)
-//  : m_buffer{ nullptr }
-  : m_buffer{ }
-  , m_buffers{ }
+const thrust::host_vector<Ty>&
+BufferedReader<Ty>::next()
+{
+  m_fullBuffersMutex.lock();
+
+  auto rval = m_fullBuffers.front();
+  m_fullBuffers.pop();
+
+  m_fullBuffersMutex.unlock();
+
+  return *rval;
+}
+
+template<typename Ty>
+void
+BufferedReader<Ty>::giveback(const thrust::host_vector<Ty> &buf)
+{
+  // make sure this is one of our buffers.
+  auto thing = std::find(m_allBuffers.begin(), m_allBuffers.end(), buf);
+  if (thing == m_allBuffers.end()) {
+    Err() << "This was not one of our buffers!";
+    return;
+  }
+
+  m_emptyBuffersMutex.lock();
+  m_emptyBuffers.push(&*thing);
+  m_emptyBuffersMutex.unlock();
+
+  m_cv.notify_all();
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+template<typename Ty>
+size_t
+BufferedReader<Ty>::bufferSizeElements() const
+{
+  return m_szBytesTotal / m_nBufs;
+}
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+template<typename Ty>
+BufferedReader<Ty>::BufferedReader(size_t bufSize, int nbuf)
+  : m_emptyBuffers{ }
   , m_nBufs{ nbuf }
   , m_szBytesTotal{ bufSize }
 //  , m_filePos{ 0 }
@@ -165,30 +197,41 @@ BufferedReader<Ty>::open(const std::string &path)
   m_is = new std::ifstream();
   m_is->open(path, std::ios::binary);
 
-  if (m_is->is_open()) {
-    m_buffer.resize(m_szBytesTotal / sizeof(Ty));
-    return true;
+  if ( ! m_is->is_open()) { return false; }
+
+  for(int i=0; i < m_nBufs; ++i) {
+    m_allBuffers.push_back( thrust::host_vector<Ty>{} );
+    m_allBuffers.back().resize( bufferSizeElements() );
+    m_emptyBuffers.push(&(m_allBuffers.back()));
   }
 
-  return false;
+  Info() << "Generated " << m_allBuffers.size() << " buffers of size " << bufferSizeElements();
+
+  return true;
+
 }
 
 
+///////////////////////////////////////////////////////////////////////////////
 template<typename Ty>
 bool
 BufferedReader<Ty>::start()
 {
   m_stopReading = false;
-  m_readThread(this->fillBuffer, this);
+  m_readThread = std::thread(BufferedReader::fillBuffer, this);
   return true;
 }
 
+
+///////////////////////////////////////////////////////////////////////////////
 template<typename Ty>
-bool
+void
 BufferedReader<Ty>::stop()
 {
   m_stopReading = true;
+  m_readThread.join();
 }
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // static
@@ -196,32 +239,18 @@ template<typename Ty>
 void
 BufferedReader<Ty>::fillBuffer(BufferedReader *inst)
 {
-  Ty *h_buf{ inst->m_buffer.data() };
   int next_empty{ 0 };
   size_t buffer_size_elements{ inst->bufferSizeElements() };
+  size_t nbufs{ inst->m_nBufs };
+  std::atomic<bool> *stop_reading = &(inst->m_stopReading);
 
-  while (! inst->m_stopReading) {
-    while (inst->m_buffers.size() >= inst->m_nBufs) {
-      inst->m_cv.wait(inst->m_buffersMutex);
-    }
+  std::queue<thrust::host_vector<Ty>*> *empty_buffers{ &(inst->m_emptyBuffers) };
+  std::queue<thrust::host_vector<Ty>*> *full_buffers{ &(inst->m_fullBuffers) };
 
-    h_buf = h_buf + (next_empty * buffer_size_elements);
-
-    inst->m_is->read(reinterpret_cast<char *>(h_buf), buffer_size_elements * sizeof(Ty));
-
-    std::streampos amount{ inst->m_is->gcount() };
-//    inst->m_filePos += amount;
-
-    inst->m_mutex.lock();
-    inst->m_buffers.push(inst->makePair(next_empty, amount/sizeof(Ty)));
-    inst->m_mutex.unlock();
-
-    next_empty = (next_empty + 1) % inst->m_nBufs;
-
-  }
 }
 
 
+///////////////////////////////////////////////////////////////////////////////
 template<typename Ty>
 void
 BufferedReader<Ty>::reset()

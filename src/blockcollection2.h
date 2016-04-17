@@ -10,6 +10,7 @@
 #include <glm/glm.hpp>
 
 #include <thrust/host_vector.h>
+#include <thrust/pair.h>
 #include <thrust/extrema.h>
 
 #include <fstream>
@@ -19,6 +20,7 @@
 #include <stdexcept>
 #include <cassert>
 #include <iterator>
+
 
 namespace preproc
 {
@@ -271,25 +273,28 @@ BlockCollection2<Ty>::computeVolumeStatistics(BufferedReader<Ty> &r)
   Info() << "Computing volume statistics...";
 
 
-  r.reset();
+//  r.reset();
 //  const Ty *ptr = r.buffer_ptr();
 //  const thrust::host_vector<Ty> &buf = r.buffer();
 //
 ////  thrust::host_vector<Ty> h_vec;
 ////  h_vec.reserve(r.bufferSizeElements());
 //
-//  while(r.hasNextFill()) {
-//    std::cerr << "Filling buffer.\n";
-//    size_t elems = r.fillBuffer();
-//    std::cerr << "Read " << elems << " elements\n";
-//
-//    std::cerr << "Find min max.\n";
-//    auto minmax =
-//      thrust::minmax_element(buf.begin(), buf.begin()+elems);
-//
-//    std::cerr << "Reduce.\n";
-//    auto sum = thrust::reduce(buf.begin(), buf.begin()+elems);
-//
+  while(r.hasNextFill()) {
+//    decltype(r.next()) buf = r.next();
+
+    std::cerr << "Filling buffer.\n";
+    //std::cerr << "Read " << elems << " elements\n";
+
+//    auto buf1 = buf.first;
+//    auto bufend1 = buf.second;
+
+    std::cerr << "Find min max.\n";
+//    auto minmax = thrust::minmax_element(buf.first, buf.second);
+
+    std::cerr << "Reduce.\n";
+//    auto sum = thrust::reduce(buf1, bufend1);
+
 //    m_volAvg += sum;
 //    m_volMin = std::min<decltype(m_volMin)>(m_volMin, *(minmax.first));
 //    m_volMax = std::max<decltype(m_volMax)>(m_volMax, *(minmax.second));
@@ -302,7 +307,7 @@ BlockCollection2<Ty>::computeVolumeStatistics(BufferedReader<Ty> &r)
 //      m_volAvg  += static_cast<decltype(m_volAvg)>(val);
 //    }
 
-//  }
+  }
 
   m_volAvg /= m_volDims.x*m_volDims.y*m_volDims.z;
 
@@ -317,7 +322,7 @@ void
 BlockCollection2<Ty>::computeBlockStatistics(BufferedReader<Ty> &r)
 {
   Info() << "Computing block statistics for " << m_blocks.size() << " blocks.";
-  r.reset();
+//  r.reset();
 
 //  const Ty *buf{ r.buffer_ptr() };
 //  const thrust::host_vector<Ty> &buf = r.buffer();
@@ -495,6 +500,7 @@ BlockCollection2<Ty>::filterBlocks
   if (! r.open(file)) {
     throw std::runtime_error("Could not open file" + file);
   }
+  r.start();
 
   computeVolumeStatistics(r);
   //computeBlockStatistics(r);

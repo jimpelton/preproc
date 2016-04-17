@@ -22,10 +22,10 @@ if (WIN32)
 endif (WIN32)
 
 if (UNIX)
-    set(CMAKE_C_COMPILER "/usr/local/bin/clang-omp")
-    set(CMAKE_CXX_COMPILER "/usr/local/bin/clang-omp++")
-    set(CMAKE_AR "/usr/local/bin/ar")
-    set(CMAKE_RANLIB "/usr/local/bin/ranlib")
+#    set(CMAKE_C_COMPILER "/usr/local/bin/clang-omp")
+#    set(CMAKE_CXX_COMPILER "/usr/local/bin/clang-omp++")
+#    set(CMAKE_AR "/usr/local/bin/ar")
+#    set(CMAKE_RANLIB "/usr/local/bin/ranlib")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall \
     -Wno-missing-braces \
     -fopenmp \
@@ -45,8 +45,7 @@ include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/tclap/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/thrust/"
     "${GLM_INCLUDE_DIRS}"
-
-    #"${CUDA_INCLUDE_DIRS}"
+#    "${CUDA_INCLUDE_DIRS}"
 )
 
 
@@ -59,7 +58,7 @@ add_executable(
 )
 
 #link_directories("/opt/cuda/lib64/")
-#target_link_libraries(preproc "gomp")
+target_link_libraries(preproc "gomp")
 
 ###########################################################################
 # Compiler options for Clang
