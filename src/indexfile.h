@@ -83,7 +83,8 @@ public:
   virtual void addBlock(const FileBlock&) = 0;
   virtual const std::vector<FileBlock*>& blocks() = 0;
   virtual const std::vector<FileBlock*>& nonEmptyBlocks() = 0;
-  virtual void filterBlocks(const std::string &rawFile, size_t buffSize, float min, float max, bool normalize=true) = 0;
+  virtual void filterBlocks(const std::string &rawFile, size_t buffSize, 
+      float min, float max, bool normalize=true) = 0;
 //  virtual void filterBlocks(std::ifstream &, float min, float max) = 0;
   virtual glm::u64vec3 numBlocks() = 0;
   virtual glm::u64vec3 volDims() = 0;
@@ -93,6 +94,7 @@ public:
   virtual double volAvg() = 0;
 
 };
+
 
 ///////////////////////////////////////////////////////////////////////////////
 /// \sa base_collection_wrapper
@@ -126,7 +128,8 @@ public:
   }
 
 
-  void filterBlocks(const std::string &rawFile, size_t buffSize, float min, float max, bool normalize=false) override
+  void filterBlocks(const std::string &rawFile, size_t buffSize, 
+      float min, float max, bool normalize=false) override
   {
     c.filterBlocks(rawFile, buffSize, min, max, normalize);
   }

@@ -3,15 +3,12 @@
 
 #include "fileblock.h"
 #include "bufferedreader.h"
+#include "buffer.h"
 #include "logger.h"
 #include "util.h"
 
 
 #include <glm/glm.hpp>
-
-#include <thrust/host_vector.h>
-#include <thrust/pair.h>
-#include <thrust/extrema.h>
 
 #include <fstream>
 #include <iostream>
@@ -35,7 +32,6 @@ namespace preproc
 template<typename Ty>
 class BlockCollection2
 {
-public:
 
 
 public:
@@ -186,11 +182,7 @@ BlockCollection2<Ty>::BlockCollection2()
 
 ///////////////////////////////////////////////////////////////////////////////
 template<typename Ty>
-BlockCollection2<Ty>::BlockCollection2
-(
-    glm::u64vec3 volDims,
-    glm::u64vec3 numBlocks
-)
+BlockCollection2<Ty>::BlockCollection2(glm::u64vec3 volDims, glm::u64vec3 numBlocks)
   : m_blockDims{ volDims/numBlocks }
   , m_volDims{ volDims }
   , m_numBlocks{ numBlocks }
@@ -619,7 +611,8 @@ BlockCollection2<Ty>::fillBlockData
   }
 }
 
-} // namespace bd
+
+} // namespace preproc
 
 #endif // !blockcollection2_h__
 
