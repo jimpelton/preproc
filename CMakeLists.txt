@@ -43,7 +43,7 @@ find_package(GLM REQUIRED)
 
 include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/tclap/include"
-    "${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/thrust/"
+    #    "${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/thrust/"
     "${GLM_INCLUDE_DIRS}"
 #    "${CUDA_INCLUDE_DIRS}"
 )
@@ -58,7 +58,7 @@ add_executable(
 )
 
 #link_directories("/opt/cuda/lib64/")
-target_link_libraries(preproc "gomp")
+target_link_libraries(preproc "tbb")
 
 ###########################################################################
 # Compiler options for Clang

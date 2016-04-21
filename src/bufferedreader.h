@@ -3,10 +3,12 @@
 
 #include "readerworker.h"
 #include "bufferpool.h"
+#include "buffer.h"
 
 #include <fstream>
 #include <thread>
 #include <mutex>
+#include <future>
 
 namespace preproc
 {
@@ -46,40 +48,44 @@ public:
   void reset();
 
 
-  ///////////////////////////////////////////////////////////////////////////////
-  /// \brief True if not at end of file.
-  ///////////////////////////////////////////////////////////////////////////////
-  bool hasNextFill() const { return !(m_is->eof()); }
+  bool hasNext() const { return m_pool->hasNext(); }
+
+  bool eof() const {
+    return m_future.wait_for(std::chrono::seconds(0)) ==
+        std::future_status::ready;
+  }
+
+  Buffer<Ty>* waitNext() 
+  { 
+    return m_pool->nextFull(); 
+  }   
+
+  void waitReturn(Buffer<Ty>* buf) 
+  { 
+    return m_pool->returnEmpty(buf); 
+  }   
   
 private:
   std::string m_path;
 
   size_t m_bufSizeBytes;
 
-  std::ifstream *m_is;
   BufferPool<Ty> *m_pool;  
-  ReaderWorker<BufferedReader<Ty>, BufferPool<Ty>, Ty> *m_worker;
-  std::thread *m_readThread;
+  std::future<int> m_future;
 };
 
 template<typename Ty>
 BufferedReader<Ty>::BufferedReader(size_t bufSize)
   : m_path{ }
   , m_bufSizeBytes{ bufSize }
-  , m_is{ nullptr }
   , m_pool{ nullptr }
-  , m_worker{ nullptr }
-  , m_readThread{ nullptr }
-{
-}
+  , m_future{ }
+{ }
 
 template<typename Ty>
 BufferedReader<Ty>::~BufferedReader()
 {
-  if (m_is) delete m_is;
   if (m_pool) delete m_pool;
-  if (m_worker) delete m_worker;
-  if (m_readThread) delete m_readThread;
 } 
 
 template<typename Ty>
@@ -87,16 +93,8 @@ bool
 BufferedReader<Ty>::open(const std::string &path)
 {
   m_path = path;
-  m_is = new std::ifstream();
-  m_is->open(path, std::ios::binary);
-
-  if (! m_is->is_open()) { 
-      return false; 
-  }
-  
   m_pool = new BufferPool<Ty>(m_bufSizeBytes, 4);  
   m_pool->allocate();
-
   return true;
 
 }
@@ -107,9 +105,21 @@ template<typename Ty>
 bool
 BufferedReader<Ty>::start()
 {
-  ReaderWorker<BufferedReader<Ty>, BufferPool<Ty>, Ty> worker(this, m_pool);
-  worker.setFileStream(m_is);
-  m_readThread = new std::thread(worker);
+
+  m_future = std::async(std::launch::async, [&]() { 
+      ReaderWorker<BufferedReader<Ty>, BufferPool<Ty>, Ty> worker(this, m_pool);
+      worker.setPath(m_path);
+      return worker(); });
+  
+//  Info() << "Reader thread created: " << std::hex << m_readThread->get_id();
+
+//  bool running = m_readThread->joinable();
+//  if (running) {
+//    Info() << "Reader thread in running state.";
+//  } else {
+//    Err() << "Reader thread is not running for some reason.";
+//  }
+    
   return true;
 }
 
@@ -119,9 +129,9 @@ template<typename Ty>
 void
 BufferedReader<Ty>::stop()
 {
-  m_worker->requestStop();
-  Info() << "Waiting for reader thread to stop.";
-  m_readThread->join();
+//  m_worker->requestStop();
+//  Info() << "Waiting for reader thread to stop.";
+//  m_readThread->join();
 }
 
 
@@ -130,8 +140,9 @@ template<typename Ty>
 void
 BufferedReader<Ty>::reset()
 {
-  m_is->clear();
-  m_is->seekg(0, std::ios::beg);
+//  m_is->clear();
+//  m_is->seekg(0, std::ios::beg);
+    
 }
 
 

@@ -7,9 +7,13 @@
 #include "logger.h"
 #include "util.h"
 
+#include <tbb/parallel_reduce.h>
+#include <tbb/blocked_range.h>
 
 #include <glm/glm.hpp>
 
+#include <numeric>
+#include <functional>
 #include <fstream>
 #include <iostream>
 #include <vector>
@@ -265,40 +269,33 @@ BlockCollection2<Ty>::computeVolumeStatistics(BufferedReader<Ty> &r)
   Info() << "Computing volume statistics...";
 
 
-//  r.reset();
-//  const Ty *ptr = r.buffer_ptr();
-//  const thrust::host_vector<Ty> &buf = r.buffer();
-//
-////  thrust::host_vector<Ty> h_vec;
-////  h_vec.reserve(r.bufferSizeElements());
-//
-  while(r.hasNextFill()) {
-//    decltype(r.next()) buf = r.next();
+  while(r.hasNext() || !r.eof()) {
+    Buffer<Ty> *buf = r.waitNext();
+    Info() << "CO: Got buffer of " << buf->elements() << " elements.";
+    Ty *p = buf->ptr();
 
-    std::cerr << "Filling buffer.\n";
-    //std::cerr << "Read " << elems << " elements\n";
-
-//    auto buf1 = buf.first;
-//    auto bufend1 = buf.second;
-
-    std::cerr << "Find min max.\n";
-//    auto minmax = thrust::minmax_element(buf.first, buf.second);
-
-    std::cerr << "Reduce.\n";
-//    auto sum = thrust::reduce(buf1, bufend1);
-
-//    m_volAvg += sum;
-//    m_volMin = std::min<decltype(m_volMin)>(m_volMin, *(minmax.first));
-//    m_volMax = std::max<decltype(m_volMax)>(m_volMax, *(minmax.second));
-
-
-//    for (size_t col{ 0 }; col < elems; ++col) {
-//      Ty val{ ptr[col] };
+    Info() << "CO: Min/maxing this buffer\n"; 
+//    for (size_t col{ 0 }; col < buf->elements(); ++col) {
+//      Ty val{ p[col] };
 //      m_volMin = std::min<decltype(m_volMin)>(m_volMin, val);
 //      m_volMax = std::max<decltype(m_volMax)>(m_volMax, val);
 //      m_volAvg  += static_cast<decltype(m_volAvg)>(val);
 //    }
 
+    m_volAvg += 
+        tbb::parallel_reduce(
+                tbb::blocked_range<Ty*>(p, p+buf->elements()),
+                0.0,
+                []( tbb::blocked_range<Ty*>& r, double partial_sum )->double{
+                    return std::accumulate( r.begin(), r.end(), partial_sum );
+                },
+                std::plus<double>()
+            );
+
+    Info() << "CO: Returning empty buffer.";
+    r.waitReturn(buf);
+
+    Info() << "CO: Waiting for buffer.";
   }
 
   m_volAvg /= m_volDims.x*m_volDims.y*m_volDims.z;
@@ -317,7 +314,6 @@ BlockCollection2<Ty>::computeBlockStatistics(BufferedReader<Ty> &r)
 //  r.reset();
 
 //  const Ty *buf{ r.buffer_ptr() };
-//  const thrust::host_vector<Ty> &buf = r.buffer();
 //
 //  // voxel index within the entire volume
 //  size_t vol_idx = 0;

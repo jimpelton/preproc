@@ -8,6 +8,7 @@
 #include <ostream>
 #include <iostream>
 #include <chrono>
+#include <thread>
 
 namespace preproc {
 
@@ -45,7 +46,8 @@ public:
   logger&
   start_line()
   {
-    *m_out << "\n- " << now() << " " << m_levelString << ":\t";
+    std::thread::id tid = std::this_thread::get_id();
+    *m_out << "\n- " << now() << " (" << std::hex << tid << std::dec << ") " << m_levelString << ":\t";
     return *this;
   }
 

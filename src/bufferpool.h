@@ -60,25 +60,25 @@ public:
   ///////////////////////////////////////////////////////////////////////////////
   /// \brief Wait for a full buffer to be placed in the queue and return it.
   ///////////////////////////////////////////////////////////////////////////////
-  const Buffer<Ty>& nextFull();
+  Buffer<Ty>* nextFull();
 
 
   ///////////////////////////////////////////////////////////////////////////////
   /// \brief Return an empty buffer to the queue to be filled again.
   ///////////////////////////////////////////////////////////////////////////////
-  void returnEmpty(Buffer<Ty>&);
+  void returnEmpty(Buffer<Ty>*);
 
 
   ///////////////////////////////////////////////////////////////////////////////
   /// \brief Get an empty buffer from the queue.
   ///////////////////////////////////////////////////////////////////////////////
-  Buffer<Ty>& nextEmpty();
+  Buffer<Ty>* nextEmpty();
   
 
   ///////////////////////////////////////////////////////////////////////////////
   /// \brief Return a full buffer to the queue.
   ///////////////////////////////////////////////////////////////////////////////
-  void returnFull(Buffer<Ty>&);
+  void returnFull(Buffer<Ty>*);
 
 
   ///////////////////////////////////////////////////////////////////////////////
@@ -89,10 +89,15 @@ public:
   size_t bufferSizeElements() const;
 
 
+  bool hasNext();
+    
+
+  void kickThreads();
+
 private:
 
   Ty *m_mem;
-  std::vector<Buffer<Ty>> m_allBuffers;
+  std::vector<Buffer<Ty>*> m_allBuffers;
   std::queue<Buffer<Ty>*> m_emptyBuffers;
   std::queue<Buffer<Ty>*> m_fullBuffers;
 
@@ -123,6 +128,10 @@ BufferPool<Ty>::BufferPool(size_t bufSize, int nbuf)
 template<typename Ty>
 BufferPool<Ty>::~BufferPool()
 {
+  for( auto buf : m_allBuffers ) {
+    delete buf;
+  }
+
   if (m_mem) delete[] m_mem;
 }
 
@@ -131,42 +140,28 @@ void
 BufferPool<Ty>::allocate()
 {
   size_t buffer_size_elems{ bufferSizeElements() };
-  m_mem = new Ty[ buffer_size_elems * sizeof(Ty) ];
-  
+
+  m_mem = new Ty[ buffer_size_elems * m_nBufs ];
+  Info() << "Allocated " << buffer_size_elems * m_nBufs << " elements ( " << 
+      m_szBytesTotal << " bytes)."; 
+
   for(int i=0; i < m_nBufs; ++i) {
     size_t offset{ i * buffer_size_elems };
     Ty *start{ m_mem + offset };
-
-    m_allBuffers.push_back( Buffer<Ty>{ start, buffer_size_elems } );
-    m_emptyBuffers.push( &(m_allBuffers.back()) );
+    Buffer<Ty> *buf{ new Buffer<Ty>{start, buffer_size_elems} };
+    m_allBuffers.push_back( buf );
+    m_emptyBuffers.push( buf );
   }
 
-  Info() << "Generated " << m_allBuffers.size() << 
-    " buffers of size " << buffer_size_elems;
+  Info() << "Generated " << m_allBuffers.size() << " buffers of size " << 
+      buffer_size_elems;
 
 }
-///////////////////////////////////////////////////////////////////////////////
-// static
-//template<typename Ty>
-//void
-//BufferPool<Ty>::fillBuffer(BufferPool *inst)
-//{
-//  int next_empty{ 0 };
-//  size_t buffer_size_elements{ inst->bufferSizeElements() };
-//  size_t nbufs{ inst->m_nBufs };
-//  std::atomic<bool> *stop_reading = &(inst->m_stopReading);
-//
-//  std::queue<thrust::host_vector<Ty>*> *empty_buffers{ &(inst->m_emptyBuffers) };
-//  std::queue<thrust::host_vector<Ty>*> *full_buffers{ &(inst->m_fullBuffers) };
-//
-//}
-
-
 
 
 ///////////////////////////////////////////////////////////////////////////////
 template<typename Ty>
-const Buffer<Ty>&
+Buffer<Ty> *
 BufferPool<Ty>::nextFull()
 {
   m_fullBuffersLock.lock();
@@ -174,19 +169,19 @@ BufferPool<Ty>::nextFull()
     m_fullBuffersAvailable.wait(m_fullBuffersLock);
   }
 
-  auto *buf = m_fullBuffers.front();
+  Buffer<Ty> *buf = m_fullBuffers.front();
   m_fullBuffers.pop();
 
   m_fullBuffersLock.unlock();
 
-  return *buf;
+  return buf;
 }
 
 
 ///////////////////////////////////////////////////////////////////////////////
 template<typename Ty>
 void
-BufferPool<Ty>::returnEmpty(Buffer<Ty> &buf)
+BufferPool<Ty>::returnEmpty(Buffer<Ty> *buf)
 {
   // make sure this is one of our buffers.
 //  auto thing = std::find(m_allBuffers.begin(), m_allBuffers.end(), buf);
@@ -197,17 +192,17 @@ BufferPool<Ty>::returnEmpty(Buffer<Ty> &buf)
 
   m_emptyBuffersLock.lock();
 
-  m_emptyBuffers.push(&buf);
-  m_emptyBuffersAvailable.notify_all();
+  m_emptyBuffers.push(buf);
 
   m_emptyBuffersLock.unlock();
 
+  m_emptyBuffersAvailable.notify_all();
 }
 
 
 ///////////////////////////////////////////////////////////////////////////////
 template<typename Ty>
-Buffer<Ty>&
+Buffer<Ty> *
 BufferPool<Ty>::nextEmpty()
 {
   m_emptyBuffersLock.lock();
@@ -220,19 +215,19 @@ BufferPool<Ty>::nextEmpty()
 
   m_emptyBuffersLock.unlock();
 
-  return *buf;
+  return buf;
 }
 
 
 ///////////////////////////////////////////////////////////////////////////////
 template<typename Ty>
 void
-BufferPool<Ty>::returnFull(Buffer<Ty> &buf)
+BufferPool<Ty>::returnFull(Buffer<Ty> *buf)
 {
   m_fullBuffersLock.lock();
-  m_fullBuffers.push(&buf);
-  m_fullBuffersAvailable.notify_all();
+  m_fullBuffers.push(buf);
   m_fullBuffersLock.unlock();
+  m_fullBuffersAvailable.notify_all();
 }
 
 
@@ -241,10 +236,30 @@ template<typename Ty>
 size_t
 BufferPool<Ty>::bufferSizeElements() const
 {
-  return m_szBytesTotal / m_nBufs;
+  return (m_szBytesTotal / m_nBufs) / sizeof(Ty);
 }
 
+template<typename Ty>
+bool
+BufferPool<Ty>::hasNext()
+{
+  m_emptyBuffersLock.lock();
+  if(m_emptyBuffers.size() == m_allBuffers.size()) {
+    m_emptyBuffersLock.unlock();
+    return false;
+  }
 
+  m_emptyBuffersLock.unlock();
+  return true;
+}
+
+template<typename Ty>
+void
+BufferPool<Ty>::kickThreads()
+{
+    m_emptyBuffersAvailable.notify_all();
+    m_fullBuffersAvailable.notify_all();
+}
 
 } // namespace preproc
 
