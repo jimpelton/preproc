@@ -47,13 +47,30 @@ public:
   ///////////////////////////////////////////////////////////////////////////////
   void reset();
 
-
-  bool hasNext() const { return m_pool->hasNext(); }
-
   bool eof() const {
     return m_future.wait_for(std::chrono::seconds(0)) ==
         std::future_status::ready;
   }
+
+  bool hasNext() const { 
+      // if no buffers in pool, check if the reader thread is done.
+      // If it hasn't, then we should return true.
+      if (!m_pool->hasNext()) {
+          // if no buffers in pool, but reader is still reading, then
+          // we will have a next buffer soon.
+          if (!eof()){ 
+              return true;
+          } else {
+              // if there are no buffers and the reader is done, we are
+              // done reading.
+              return false;
+          }
+      } else {
+          // if there are buffers in the pool, then return true.
+          return true;
+      }
+  }
+
 
   Buffer<Ty>* waitNext() 
   { 
@@ -107,9 +124,10 @@ BufferedReader<Ty>::start()
 {
 
   m_future = std::async(std::launch::async, [&]() { 
-      ReaderWorker<BufferedReader<Ty>, BufferPool<Ty>, Ty> worker(this, m_pool);
-      worker.setPath(m_path);
-      return worker(); });
+          ReaderWorker<BufferedReader<Ty>, BufferPool<Ty>, Ty> worker(this, m_pool);
+          worker.setPath(m_path);
+          return worker(); 
+      });
   
 //  Info() << "Reader thread created: " << std::hex << m_readThread->get_id();
 

@@ -40,33 +40,38 @@ public:
     size_t total_read_bytes{ 0 };
 
     Info() << "RW: Entering loop"; 
-    while(!(m_is->eof()) && !m_stopRequested) {
+    while(!(m_is->eof()) || !m_stopRequested) {
       Info() << "RW: Waiting for buffer in readerworker loop.";
 
       Buffer<Ty> *buf = m_pool->nextEmpty();
+      buf->index(total_read_bytes / sizeof(Ty));  // element index this buffer starts at.
       Ty *data = buf->ptr();
-      Info() << "RW: Got buffer in readerworker loop.";
+        
+      Info() << "RW: Reading into buffer.";
       m_is->read(reinterpret_cast<char*>(data), buffer_size_bytes);
       std::streampos amount{ m_is->gcount() };
       Info() << "RW: Read " << amount << " bytes.";
-
+      
       // the last buffer filled may not be a full buffer, so resize!
-      if (amount < buffer_size_bytes ) {
-        if (amount < 0) {
-          Err() << "RW: Read < 0 bytes, breaking out of IO loop.";
-          return -1;
-        }
+      if ( amount < static_cast<long long>(buffer_size_bytes) ) {
+
         buf->elements(amount/sizeof(Ty));
-      }
-
-      total_read_bytes += amount;
-
+        if (amount == 0) {
+          Info() << "RW: Returning empty buffer.";
+          m_pool->returnEmpty(buf);
+          Info() << "RW: Returned empty buffer.";
+          break;
+        }
+      } // if (amount...)
+        
       Info() << "RW: Going to return full buffer.";
       m_pool->returnFull(buf);
       Info() << "RW: Returned full buffer.";
+
+      total_read_bytes += amount;
     } // while
 
-    Info() << "RW: Leaving IO loop.";
+    Info() << "RW: Leaving IO loop after reading " << total_read_bytes << " bytes";
     return total_read_bytes;
   }
 

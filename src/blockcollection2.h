@@ -21,6 +21,7 @@
 #include <stdexcept>
 #include <cassert>
 #include <iterator>
+// #include <utility>
 
 
 namespace preproc
@@ -190,8 +191,8 @@ BlockCollection2<Ty>::BlockCollection2(glm::u64vec3 volDims, glm::u64vec3 numBlo
   : m_blockDims{ volDims/numBlocks }
   , m_volDims{ volDims }
   , m_numBlocks{ numBlocks }
-  , m_volMax{ std::numeric_limits<decltype(m_volMax)>::min() }
-  , m_volMin{ std::numeric_limits<decltype(m_volMin)>::max() }
+  , m_volMax{ std::numeric_limits<double>::min() }
+  , m_volMin{ std::numeric_limits<double>::max() }
   , m_volAvg{ 0.0 }
   , m_blocks{ }
   , m_nonEmptyBlocks{ }
@@ -267,14 +268,13 @@ void
 BlockCollection2<Ty>::computeVolumeStatistics(BufferedReader<Ty> &r)
 {
   Info() << "Computing volume statistics...";
+  size_t total_bytes_processed{ 0 };  
 
-
-  while(r.hasNext() || !r.eof()) {
+  while(r.hasNext()) {
     Buffer<Ty> *buf = r.waitNext();
     Info() << "CO: Got buffer of " << buf->elements() << " elements.";
     Ty *p = buf->ptr();
 
-    Info() << "CO: Min/maxing this buffer\n"; 
 //    for (size_t col{ 0 }; col < buf->elements(); ++col) {
 //      Ty val{ p[col] };
 //      m_volMin = std::min<decltype(m_volMin)>(m_volMin, val);
@@ -282,6 +282,7 @@ BlockCollection2<Ty>::computeVolumeStatistics(BufferedReader<Ty> &r)
 //      m_volAvg  += static_cast<decltype(m_volAvg)>(val);
 //    }
 
+    Info() << "CO: Averaging this buffer\n"; 
     m_volAvg += 
         tbb::parallel_reduce(
                 tbb::blocked_range<Ty*>(p, p+buf->elements()),
@@ -292,6 +293,40 @@ BlockCollection2<Ty>::computeVolumeStatistics(BufferedReader<Ty> &r)
                 std::plus<double>()
             );
 
+    Info() << "CO: Finding min for this buffer.";
+    Ty tmin =
+        tbb::parallel_reduce(
+                tbb::blocked_range<Ty*>(p, p+buf->elements()),
+                m_volMin,
+                //std::numeric_limits<Ty>::max(),
+                [&]( tbb::blocked_range<Ty*>& r, Ty min )->Ty{
+                     Ty t = *std::min_element(r.begin(), r.end(), std::less<Ty>());
+                     return std::min(t, min);
+                },
+                std::less<Ty>()
+            );
+
+    Info() << "CO: Finding max for this buffer.";
+    Ty tmax =
+        tbb::parallel_reduce(
+                tbb::blocked_range<Ty*>(p, p+buf->elements()),
+                m_volMax,
+                //std::numeric_limits<Ty>::min(),
+                [&]( tbb::blocked_range<Ty*>& r, Ty max )->Ty{
+                    Ty t = *std::max_element(r.begin(), r.end());
+                    return std::max(t, max);
+                },
+                std::greater<Ty>()
+            );
+
+
+//    if (m_volMin > tmin) m_volMin = double(tmin);
+//    if (m_volMax < tmax) m_volMax = double(tmax);
+    Info() << "bufMin: " << double(tmin) << " bufMax: " << double(tmax) 
+           << " volMin: " << m_volMin << " volMax: " << m_volMax;
+
+    total_bytes_processed += buf->elements() * sizeof(Ty);
+
     Info() << "CO: Returning empty buffer.";
     r.waitReturn(buf);
 
@@ -301,7 +336,8 @@ BlockCollection2<Ty>::computeVolumeStatistics(BufferedReader<Ty> &r)
   m_volAvg /= m_volDims.x*m_volDims.y*m_volDims.z;
 
   Info() << "Done computing volume statistics "
-        << m_volMin << ", " << m_volMax << ", " << m_volAvg;
+        << m_volMin << ", " << m_volMax << ", " << m_volAvg 
+        << "\n Total bytes processed: " << total_bytes_processed;
 
 }
 
