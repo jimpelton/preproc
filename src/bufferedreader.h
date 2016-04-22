@@ -110,7 +110,7 @@ bool
 BufferedReader<Ty>::open(const std::string &path)
 {
   m_path = path;
-  m_pool = new BufferPool<Ty>(m_bufSizeBytes, 4);  
+  m_pool = new BufferPool<Ty>(m_bufSizeBytes, 2);
   m_pool->allocate();
   return true;
 
@@ -123,12 +123,12 @@ void
 BufferedReader<Ty>::start()
 {
   m_stopThread = false;
-  m_future = std::async(std::launch::async, [&]() { 
+  m_future = std::async(std::launch::async,
+      [&]()->size_t {
           ReaderWorker<BufferedReader<Ty>, BufferPool<Ty>, Ty> worker(this, m_pool);
           worker.setPath(m_path);
           return worker(std::ref(m_stopThread));
       });
-  
 }
 
 

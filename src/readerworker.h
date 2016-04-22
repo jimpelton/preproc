@@ -74,7 +74,6 @@ public:
     } // while
 
     m_is->close();
-
     Info() << "RW: Leaving IO loop after reading " << total_read_bytes << " bytes";
     return total_read_bytes;
   }

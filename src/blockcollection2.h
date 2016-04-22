@@ -208,6 +208,7 @@ BlockCollection2<Ty>::~BlockCollection2()
   std::cout << "BlockCollection2 destructor\n";
 }
 
+
 ///////////////////////////////////////////////////////////////////////////////
 // nb: number of blocks
 // vd: volume voxel dimensions
@@ -269,54 +270,52 @@ void
 BlockCollection2<Ty>::computeVolumeStatistics(BufferedReader<Ty> &r)
 {
   Info() << "Computing volume statistics...";
+
   size_t total_bytes_processed{ 0 };  
+  double volsum{ 0.0 };
+  Ty min{ std::numeric_limits<Ty>::max() };
+  Ty max{ std::numeric_limits<Ty>::min() };
 
   while(r.hasNext()) {
     Buffer<Ty> *buf = r.waitNext();
     Info() << "CO: Got buffer of " << buf->elements() << " elements.";
     Ty *p = buf->ptr();
 
-//    for (size_t col{ 0 }; col < buf->elements(); ++col) {
-//      Ty val{ p[col] };
-//      m_volMin = std::min<decltype(m_volMin)>(m_volMin, val);
-//      m_volMax = std::max<decltype(m_volMax)>(m_volMax, val);
-//      m_volAvg  += static_cast<decltype(m_volAvg)>(val);
-//    }
-
-    Info() << "CO: Averaging this buffer\n"; 
-    m_volAvg += 
+    Info() << "CO: Averaging this buffer\n";
+    volsum +=
         tbb::parallel_reduce(
                 tbb::blocked_range<Ty*>(p, p+buf->elements()),
                 0.0,
-                []( tbb::blocked_range<Ty*>& r, double partial_sum )->double{
-                    return std::accumulate( r.begin(), r.end(), partial_sum );
+                []( tbb::blocked_range<Ty*>& br, double partial_sum )->double{
+                    return std::accumulate( br.begin(), br.end(), partial_sum );
                 },
                 std::plus<double>()
             );
 
-    Info() << "CO: Finding min for this buffer.";
+    Info() << "CO: Finding min/max for this buffer.";
     tbb::blocked_range<size_t> range(0, buf->elements());
     ParallelMinMax<Ty> mm(buf->ptr());
     tbb::parallel_reduce(range, mm);
 
-    Ty tmin = mm.min_value;
-    Ty tmax = mm.max_value;
+    if (mm.min_value < min)
+      min = mm.min_value;
 
-    if (m_volMin > tmin) m_volMin = double(tmin);
-    if (m_volMax < tmax) m_volMax = double(tmax);
-
-    Info() << "bufMin: " << double(tmin) << " bufMax: " << double(tmax) 
-           << " volMin: " << m_volMin << " volMax: " << m_volMax;
-
-    total_bytes_processed += buf->elements() * sizeof(Ty);
+    if (mm.max_value > max)
+      max = mm.max_value;
 
     Info() << "CO: Returning empty buffer.";
     r.waitReturn(buf);
 
-    Info() << "CO: Waiting for buffer.";
-  }
 
-  m_volAvg /= m_volDims.x*m_volDims.y*m_volDims.z;
+    Info() << "bufMin: " << mm.min_value << " bufMax: " << mm.max_value
+           << " volMin: " << m_volMin << " volMax: " << m_volMax;
+
+    total_bytes_processed += buf->elements() * sizeof(Ty);
+
+  }
+  m_volMin = min;
+  m_volMax = max;
+  m_volAvg = volsum / (m_volDims.x*m_volDims.y*m_volDims.z);
 
   Info() << "Done computing volume statistics "
         << m_volMin << ", " << m_volMax << ", " << m_volAvg 
@@ -330,8 +329,13 @@ void
 BlockCollection2<Ty>::computeBlockStatistics(BufferedReader<Ty> &r)
 {
   Info() << "Computing block statistics for " << m_blocks.size() << " blocks.";
-  r.reset();
 
+  while(r.hasNext()) {
+    Buffer<Ty> *buf = r.waitNext();
+    Info() << "CO: Got buffer of " << buf->elements() << " elements.";
+    Ty *p = buf->ptr();
+
+  }
 //  const Ty *buf{ r.buffer_ptr() };
 //
 //  // voxel index within the entire volume
@@ -510,7 +514,9 @@ BlockCollection2<Ty>::filterBlocks
   r.start();
 
   computeVolumeStatistics(r);
-  //computeBlockStatistics(r);
+  r.reset();
+  r.start();
+  computeBlockStatistics(r);
 
   // total voxels per block
 //  size_t numvox{ m_blockDims.x*m_blockDims.y*m_blockDims.z };
