@@ -7,8 +7,12 @@
 
 #include <ostream>
 #include <iostream>
-#include <chrono>
 #include <thread>
+#include <mutex>
+#include <sstream>
+
+#include <sys/time.h>
+#include <ctime>
 
 namespace preproc {
 
@@ -47,7 +51,14 @@ public:
   start_line()
   {
     std::thread::id tid = std::this_thread::get_id();
-    *m_out << "\n- " << now() << " (" << std::hex << tid << std::dec << ") " << m_levelString << ":\t";
+    std::stringstream ss;
+    ss << "\n- " << now() << " (" << std::hex << tid << std::dec << ") "
+        << m_levelString << ":\t";
+
+    m_writeMutex.lock();
+    *m_out << ss.str();
+    m_writeMutex.unlock();
+
     return *this;
   }
 
@@ -56,7 +67,9 @@ public:
   logger&
   do_log(T t)
   {
+    m_writeMutex.lock();
     *m_out << t;
+    m_writeMutex.unlock();
     return *this;
   }
 
@@ -76,7 +89,7 @@ public:
   }
 
 
-private:
+private:  // methods
 
 
   /////////////////////////////////////////////////////////////////////////////
@@ -101,22 +114,31 @@ private:
 
   std::string now()
   {
-    auto now =
-        std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+//    auto now =
+//        std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    timeval tv;
+    time_t curtime;
+    gettimeofday(&tv, nullptr);
+    curtime = tv.tv_sec;
+    char datetimebuf[20]; // "%F %T\0" = 20 chars
+    std::strftime(datetimebuf, 20, "%F %T", std::localtime(&curtime));
+    char buf2[20+8]; // "%s.%ld\0" = 28 chars
+    sprintf(buf2, "%s.%ld", datetimebuf, tv.tv_usec);
 
-    char buf[80];
-    std::strftime(buf, 80, "%F %T", std::localtime(&now));
-
-    return std::string(buf);
+    return std::string(buf2);
   }
 
 private:   // members
   static logger *s_instance;
+
   std::ostream *m_out;
   std::ostream *m_file;
   bool m_ownsStream;
   LogLevel m_level;
   const char *m_levelString;
+
+  std::mutex m_writeMutex;
+
 
 }; // class logger
 

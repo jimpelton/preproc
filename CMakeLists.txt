@@ -29,9 +29,10 @@ if (UNIX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall \
     -Wno-missing-braces \
     -fopenmp \
-    -fdiagnostics-color=auto \
-    -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP \
-    -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP")
+    -fdiagnostics-color=auto" )
+
+#    -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP \
+#    -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP"
 endif (UNIX)
 
 
@@ -43,7 +44,6 @@ find_package(GLM REQUIRED)
 
 include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/tclap/include"
-    #    "${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/thrust/"
     "${GLM_INCLUDE_DIRS}"
 #    "${CUDA_INCLUDE_DIRS}"
 )
