@@ -20,14 +20,16 @@ class ReaderWorker
 {
 public:
   ReaderWorker(Reader *r, Pool *p)
-//  : m_hasNext{ true }
-    : m_stopRequested{ false }
-    , m_reader{ r }
+    : m_reader{ r }
     , m_pool{ p }
     , m_is{ nullptr }
   { }
 
-  size_t operator()()
+  ~ReaderWorker()
+  {
+    if (m_is) delete m_is;
+  }
+  size_t operator()(const std::atomic_bool &quit)
   {
     if (! open()) {
         Err() << "RW: Could not open file " << m_path << 
@@ -40,7 +42,7 @@ public:
     size_t total_read_bytes{ 0 };
 
     Info() << "RW: Entering loop"; 
-    while(!(m_is->eof()) || !m_stopRequested) {
+    while(!(m_is->eof()) || !quit) {
       Info() << "RW: Waiting for buffer in readerworker loop.";
 
       Buffer<Ty> *buf = m_pool->nextEmpty();
@@ -71,6 +73,8 @@ public:
       total_read_bytes += amount;
     } // while
 
+    m_is->close();
+
     Info() << "RW: Leaving IO loop after reading " << total_read_bytes << " bytes";
     return total_read_bytes;
   }
@@ -80,18 +84,6 @@ public:
   {
     m_path = path;
   }
-
-//  void setFileStream(std::ifstream *s) 
-//  {
-//    m_is = s;
-//  }
-
-
-  ///////////////////////////////////////////////////////////////////////////////
-  /// \brief Request that the reader stop working as soon as it can.
-  ///////////////////////////////////////////////////////////////////////////////
-  void requestStop() { m_stopRequested = true; }
-  
 
 
 private:
@@ -105,7 +97,6 @@ private:
 
 
 
-  bool m_stopRequested;
   Reader *m_reader;
   Pool *m_pool;
   std::ifstream *m_is;

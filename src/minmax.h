@@ -6,7 +6,7 @@
 #include <limits>
 
 template<typename Ty>
-class MinMax {
+class ParallelMinMax {
 private: 
   const Ty *const array;
 
@@ -25,13 +25,13 @@ public:
     }
   }
 
-  MinMax( MinMax &x, tbb::split )
+  ParallelMinMax( ParallelMinMax &x, tbb::split )
       : array{ x.array }
       , min_value{ std::numeric_limits<Ty>::max() }
       , max_value{ std::numeric_limits<Ty>::min() }
   { }
 
-  void join(const MinMax &y)
+  void join(const ParallelMinMax &y)
   {
     if (y.min_value < min_value) {
       min_value = y.min_value;
@@ -41,7 +41,7 @@ public:
     }
   }
 
-  MinMax(const Ty *a)
+  ParallelMinMax(const Ty *a)
       : array{ a }
       , min_value{ std::numeric_limits<Ty>::max() }
       , max_value{ std::numeric_limits<Ty>::min() }

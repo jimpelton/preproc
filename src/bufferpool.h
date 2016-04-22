@@ -27,9 +27,6 @@ class BufferPool
 {
 public:
 
-//  using ThrustNormalIter = thrust::detail::normal_iterator<Ty>;
-//  using BuffersPair = thrust::pair<ThrustNormalIter, ThrustNormalIter>;
-//  using BuffersQueue = std::queue<BuffersPair>;
 
   ////////////////////////////////////////////////////////////////////////////////
   BufferPool(size_t bufSize, int numBuffers);
@@ -42,19 +39,6 @@ public:
   /// \brief Allocate the memory for this BufferPool.
   ///////////////////////////////////////////////////////////////////////////////
   void allocate();
-
-
-  ///////////////////////////////////////////////////////////////////////////////
-  /// \brief Fill the buffer with data.
-  /// \return The number of elements (not necessarily bytes) in the buffer.
-  ///////////////////////////////////////////////////////////////////////////////
-//  static void fillBuffer(BufferPool *);
-
-
-  ///////////////////////////////////////////////////////////////////////////////
-  /// \brief Reset the reader to the start of the file.
-  ///////////////////////////////////////////////////////////////////////////////
-  void reset();
 
 
   ///////////////////////////////////////////////////////////////////////////////
@@ -94,6 +78,12 @@ public:
 
   void kickThreads();
 
+  ///////////////////////////////////////////////////////////////////////////////
+  /// \brief Return all buffers to empty pool.
+  /// \note Function not thread safe.
+  ///////////////////////////////////////////////////////////////////////////////
+  void reset();
+
 private:
 
   Ty *m_mem;
@@ -102,9 +92,7 @@ private:
   std::queue<Buffer<Ty>*> m_fullBuffers;
 
   int m_nBufs;
-
   size_t m_szBytesTotal;
-//  size_t m_filePos;
 
   std::mutex m_emptyBuffersLock;
   std::mutex m_fullBuffersLock;
@@ -118,7 +106,7 @@ private:
 ///////////////////////////////////////////////////////////////////////////////
 template<typename Ty>
 BufferPool<Ty>::BufferPool(size_t bufSize, int nbuf)
-  : m_emptyBuffers{ }
+  : m_mem{ nullptr }
   , m_nBufs{ nbuf }
   , m_szBytesTotal{ bufSize }
 { }
@@ -259,6 +247,20 @@ BufferPool<Ty>::kickThreads()
 {
     m_emptyBuffersAvailable.notify_all();
     m_fullBuffersAvailable.notify_all();
+}
+
+template<typename Ty>
+void
+BufferPool<Ty>::reset()
+{
+  for(Buffer<Ty> *b : m_allBuffers) {
+    b->elements(bufferSizeElements());
+    b->index(0);
+    m_emptyBuffers.push(b);
+  }
+  while (! m_fullBuffers.empty()) {
+    m_fullBuffers.pop();
+  }
 }
 
 } // namespace preproc

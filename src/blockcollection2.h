@@ -296,34 +296,11 @@ BlockCollection2<Ty>::computeVolumeStatistics(BufferedReader<Ty> &r)
 
     Info() << "CO: Finding min for this buffer.";
     tbb::blocked_range<size_t> range(0, buf->elements());
-    MinMax<Ty> mm(buf->ptr());
+    ParallelMinMax<Ty> mm(buf->ptr());
     tbb::parallel_reduce(range, mm);
 
     Ty tmin = mm.min_value;
-//        tbb::parallel_reduce(
-//                tbb::blocked_range<Ty*>(p, p+buf->elements()),
-//                m_volMin,
-//                //std::numeric_limits<Ty>::max(),
-//                [&]( tbb::blocked_range<Ty*>& r, Ty min )->Ty{
-//                     Ty t = *std::min_element(r.begin(), r.end(), std::less<Ty>());
-//                     return std::min(t, min);
-//                },
-//                std::less<Ty>()
-//            );
-
-//    Info() << "CO: Finding max for this buffer.";
     Ty tmax = mm.max_value;
-//        tbb::parallel_reduce(
-//                tbb::blocked_range<Ty*>(p, p+buf->elements()),
-//                m_volMax,
-//                //std::numeric_limits<Ty>::min(),
-//                [&]( tbb::blocked_range<Ty*>& r, Ty max )->Ty{
-//                    Ty t = *std::max_element(r.begin(), r.end());
-//                    return std::max(t, max);
-//                },
-//                std::greater<Ty>()
-//            );
-
 
     if (m_volMin > tmin) m_volMin = double(tmin);
     if (m_volMax < tmax) m_volMax = double(tmax);
@@ -353,7 +330,7 @@ void
 BlockCollection2<Ty>::computeBlockStatistics(BufferedReader<Ty> &r)
 {
   Info() << "Computing block statistics for " << m_blocks.size() << " blocks.";
-//  r.reset();
+  r.reset();
 
 //  const Ty *buf{ r.buffer_ptr() };
 //
