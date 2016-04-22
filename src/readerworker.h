@@ -27,7 +27,7 @@ public:
     , m_is{ nullptr }
   { }
 
-  int operator()()
+  size_t operator()()
   {
     if (! open()) {
         Err() << "RW: Could not open file " << m_path << 
@@ -99,10 +99,7 @@ private:
   {
     m_is = new std::ifstream();
     m_is->open(m_path, std::ios::binary);
-    if (! m_is->is_open()) { 
-        return false; 
-    }
-    return true;
+    return m_is->is_open();
   }
 
 

@@ -88,7 +88,7 @@ private:
   size_t m_bufSizeBytes;
 
   BufferPool<Ty> *m_pool;  
-  std::future<int> m_future;
+  std::future<size_t> m_future;
 };
 
 template<typename Ty>
@@ -129,15 +129,6 @@ BufferedReader<Ty>::start()
           return worker(); 
       });
   
-//  Info() << "Reader thread created: " << std::hex << m_readThread->get_id();
-
-//  bool running = m_readThread->joinable();
-//  if (running) {
-//    Info() << "Reader thread in running state.";
-//  } else {
-//    Err() << "Reader thread is not running for some reason.";
-//  }
-    
   return true;
 }
 
