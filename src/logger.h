@@ -97,7 +97,7 @@ private:  // methods
   /////////////////////////////////////////////////////////////////////////////
   logger()
     : m_out{ &(std::cout) }
-    , m_file{ nullptr }
+//    , m_file{ nullptr }
     , m_ownsStream{ false }
     , m_level{ LogLevel::INFO }
     , m_levelString{ "INFO" }
@@ -123,7 +123,7 @@ private:  // methods
     char datetimebuf[20]; // "%F %T\0" = 20 chars
     std::strftime(datetimebuf, 20, "%F %T", std::localtime(&curtime));
     char buf2[20+8]; // "%s.%ld\0" = 28 chars
-    sprintf(buf2, "%s.%ld", datetimebuf, tv.tv_usec);
+    sprintf(buf2, "%s.%d", datetimebuf, tv.tv_usec);
 
     return std::string(buf2);
   }
@@ -132,7 +132,7 @@ private:   // members
   static logger *s_instance;
 
   std::ostream *m_out;
-  std::ostream *m_file;
+//  std::ostream *m_file;
   bool m_ownsStream;
   LogLevel m_level;
   const char *m_levelString;

@@ -4,9 +4,7 @@
 
 set(preproc_HEADERS
     "${CMAKE_CURRENT_SOURCE_DIR}/cmdline.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/blockaverager.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/blockcollection2.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/blockfilter.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/bufferedreader.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/buffer.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/bufferpool.h"
@@ -19,6 +17,7 @@ set(preproc_HEADERS
     "${CMAKE_CURRENT_SOURCE_DIR}/parsedat.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/readerworker.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/util.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/volume.h"
     PARENT_SCOPE
     )
 
@@ -30,5 +29,6 @@ set(preproc_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/main.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/parsedat.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/util.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/volume.cpp"
     PARENT_SCOPE
     )

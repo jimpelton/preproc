@@ -100,14 +100,6 @@ IndexFile::fromRawFile
   idxfile->m_col = IndexFile::make_wrapper(type, num_vox, numblocks);
 
 
-  // open raw file
- // std::ifstream rawFile;
- // rawFile.open(idxfile->m_fileName, std::ios::in | std::ios::binary);
- // if (! rawFile.is_open()) {
- //   std::cerr << idxfile->m_fileName << " not found." << std::endl;
- //   exit(1);
- // }
-
   // filter the blocks
   idxfile->m_col->filterBlocks(idxfile->m_fileName, bufsz, minmax[0], minmax[1]);
 
@@ -115,22 +107,29 @@ IndexFile::fromRawFile
   idxfile->m_header.version       = VERSION;
   idxfile->m_header.header_length = HEAD_LEN;
 
-  idxfile->m_header.numblocks[0] = idxfile->m_col->numBlocks().x;
-  idxfile->m_header.numblocks[1] = idxfile->m_col->numBlocks().y;
-  idxfile->m_header.numblocks[2] = idxfile->m_col->numBlocks().z;
+  //TODO: add upper and lower volume boundaries.
+  idxfile->m_header.numblocks[0] =
+      idxfile->m_col->volume().lower().numBlocks().x + idxfile->m_col->volume().upper().numBlocks().x;
+  idxfile->m_header.numblocks[1] =
+      idxfile->m_col->volume().lower().numBlocks().y + idxfile->m_col->volume().upper().numBlocks().y;
+  idxfile->m_header.numblocks[2] =
+      idxfile->m_col->volume().lower().numBlocks().z + idxfile->m_col->volume().upper().numBlocks().z;
+
 
   idxfile->m_header.dataType = IndexFileHeader::getTypeInt(type);
-  idxfile->m_header.num_vox[0] = idxfile->m_col->volDims().x;
-  idxfile->m_header.num_vox[1] = idxfile->m_col->volDims().y;
-  idxfile->m_header.num_vox[2] = idxfile->m_col->volDims().z;
-  idxfile->m_header.vol_avg = idxfile->m_col->volAvg();
-  idxfile->m_header.vol_max = idxfile->m_col->volMax();
-  idxfile->m_header.vol_min = idxfile->m_col->volMin();
+  idxfile->m_header.num_vox[0] = idxfile->m_col->volume().dims().x;
+  idxfile->m_header.num_vox[1] = idxfile->m_col->volume().dims().y;
+  idxfile->m_header.num_vox[2] = idxfile->m_col->volume().dims().z;
+  idxfile->m_header.vol_avg = idxfile->m_col->volume().avg();
+  idxfile->m_header.vol_max = idxfile->m_col->volume().max();
+  idxfile->m_header.vol_min = idxfile->m_col->volume().min();
 
   return idxfile;
 
 }
 
+
+///////////////////////////////////////////////////////////////////////////////
 std::shared_ptr<IndexFile>
 IndexFile::fromBinaryIndexFile(const std::string& path)
 {
@@ -140,6 +139,7 @@ IndexFile::fromBinaryIndexFile(const std::string& path)
   return idxfile;
 }
 
+
 ///////////////////////////////////////////////////////////////////////////////
 IndexFile::IndexFile()
   : m_header{ }
@@ -148,47 +148,11 @@ IndexFile::IndexFile()
 { }
 
 
-//IndexFile::IndexFile(const IndexFile& o)
-//{
-//  m_fileName = o.m_fileName;
-//
-//  m_header = o.m_header;
-//
-//  m_col = o.m_col;
-//
-//}
-
+///////////////////////////////////////////////////////////////////////////////
 IndexFile::~IndexFile()
 {
   if (m_col) delete m_col;
 }
-
-
-///////////////////////////////////////////////////////////////////////////////
-// static
-//  template<typename Ty>
-//  IndexFileHeader
-//  IndexFile<Ty>::makeHeaderFromCollection(const BlockCollection2<Ty>& collection)
-//  {
-//    IndexFileHeader ifh{
-//        MAGIC,
-//        VERSION,
-//        HEAD_LEN,
-////------Block metadata---------------------
-//        collection.numBlocks().x,
-//        collection.numBlocks().y,
-//        collection.numBlocks().z,
-////------Volume statistics------------------
-//        collection.volDims().x,
-//        collection.volDims().y,
-//        collection.volDims().z,
-//
-//        collection.volAvg(),
-//        collection.volMin(),
-//        collection.volMax() };
-//
-//    return ifh;
-//  }
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -198,7 +162,9 @@ IndexFile::getHeader() const
   return m_header;
 }
 
-base_collection_wrapper*
+
+///////////////////////////////////////////////////////////////////////////////
+collection_wrapper_base*
 IndexFile::make_wrapper
 (
   DataType type,
@@ -206,14 +172,14 @@ IndexFile::make_wrapper
   const uint64_t numblocks[3]
   )
 {
-  base_collection_wrapper *col{ nullptr };
+  collection_wrapper_base *col{ nullptr };
 
   switch (type) {
 
   case preproc::DataType::UnsignedCharacter:
-    col = new collection_wrapper<unsigned char>
-    { { num_vox[0], num_vox[1], num_vox[2] },
-    { numblocks[0], numblocks[1], numblocks[2] } };
+    col = new collection_wrapper<unsigned char> {
+        { num_vox[0], num_vox[1], num_vox[2] },
+        { numblocks[0], numblocks[1], numblocks[2] } };
     break;
 
   case preproc::DataType::Character:
@@ -262,6 +228,8 @@ IndexFile::writeBinaryIndexFile(std::ostream& os)
   }
 }
 
+
+///////////////////////////////////////////////////////////////////////////////
 void
 IndexFile::writeBinaryIndexFile(const std::string& outpath)
 {
@@ -393,6 +361,7 @@ operator<<(std::ostream& os, const preproc::IndexFileHeader& h)
       "  \"magic\": " << h.magic_number << ",\n"
       "  \"version\": " << h.version << ",\n"
       "  \"header_length\": " << h.header_length << ",\n"
+      //TODO: add upper and lower volume boundaries.
       "  \"num_blocks\": [" << h.numblocks[0] << ", " << h.numblocks[1] << ", " << h.numblocks[2] << "],\n"
       "  \"data_type\": \"" << preproc::to_string(IndexFileHeader::getType(h)) << "\",\n"
       "  \"num_vox\": [" << h.num_vox[0] << ", " << h.num_vox[1] << ", " << h.num_vox[2] << "],\n"
@@ -404,4 +373,4 @@ operator<<(std::ostream& os, const preproc::IndexFileHeader& h)
   return os;
 }
 
-} // namepsace bd
+} // namepsace preproc

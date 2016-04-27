@@ -7,6 +7,7 @@
 #include "logger.h"
 #include "util.h"
 #include "minmax.h"
+#include "volume.h"
 
 #include <tbb/parallel_reduce.h>
 #include <tbb/blocked_range.h>
@@ -82,64 +83,15 @@ public:
   void addBlock(const FileBlock &b);
 
 
-  /////////////////////////////////////////////////////////////////////////////////
-  /// \brief Set dimensinos of blocks in voxels
-  /////////////////////////////////////////////////////////////////////////////////
-  void blockDims(const glm::u64vec3 &dims);
-
-
-  /////////////////////////////////////////////////////////////////////////////////
-  /// \brief Get dimensinos of blocks in voxels
-  /////////////////////////////////////////////////////////////////////////////////
-  glm::u64vec3 blockDims() const;
-
-
-  /////////////////////////////////////////////////////////////////////////////////
-  /// \brief Get the volume's dimensions in voxels
-  /////////////////////////////////////////////////////////////////////////////////
-  glm::u64vec3 volDims() const;
-
-
-  /////////////////////////////////////////////////////////////////////////////////
-  /// \brief Set the volume's dimensions in voxels
-  /////////////////////////////////////////////////////////////////////////////////
-  void volDims(const glm::u64vec3 &voldims);
+  const Volume& volume() { return m_volume; }
 
 
   //////////////////////////////////////////////////////////////////////////////
-  /// \brief Get the number of blocks along each axis.
-  //////////////////////////////////////////////////////////////////////////////
-  glm::u64vec3 numBlocks() const;
+  std::vector<FileBlock *> const & blocks() const { return m_blocks; }
 
 
   //////////////////////////////////////////////////////////////////////////////
-  double volMin() const
-  { return m_volMin; }
-
-
-  //////////////////////////////////////////////////////////////////////////////
-  double volMax() const
-  { return m_volMax; }
-
-
-  //////////////////////////////////////////////////////////////////////////////
-  double volAvg() const
-  { return m_volAvg; }
-
-  //////////////////////////////////////////////////////////////////////////////
-  const std::vector<FileBlock *> &
-  blocks() const
-  {
-    return m_blocks;
-  }
-
-
-  //////////////////////////////////////////////////////////////////////////////
-  const std::vector<FileBlock *> &
-  nonEmptyBlocks() const
-  {
-    return m_nonEmptyBlocks;
-  }
+  std::vector<FileBlock *> const & nonEmptyBlocks() const { return m_nonEmptyBlocks; }
 
 private:
 
@@ -161,13 +113,7 @@ private:
   void computeBlockStatistics(BufferedReader<Ty> &r);
 
 
-  glm::u64vec3 m_blockDims; ///< Dimensions of a block in voxels.
-  glm::u64vec3 m_volDims;   ///< Volume dimensions in voxels.
-  glm::u64vec3 m_numBlocks; ///< Number of blocks volume is divided into.
-
-  double m_volMax; ///< Max value found in volume.
-  double m_volMin; ///< Min value found in volume.
-  double m_volAvg; ///< Avg value found in volume.
+  Volume m_volume;
 
   std::vector<FileBlock *> m_blocks;
   std::vector<FileBlock *> m_nonEmptyBlocks;
@@ -189,12 +135,7 @@ BlockCollection2<Ty>::BlockCollection2()
 ///////////////////////////////////////////////////////////////////////////////
 template<typename Ty>
 BlockCollection2<Ty>::BlockCollection2(glm::u64vec3 volDims, glm::u64vec3 numBlocks)
-  : m_blockDims{ volDims/numBlocks }
-  , m_volDims{ volDims }
-  , m_numBlocks{ numBlocks }
-  , m_volMax{ std::numeric_limits<double>::min() }
-  , m_volMin{ std::numeric_limits<double>::max() }
-  , m_volAvg{ 0.0 }
+  : m_volume{ volDims, numBlocks }
   , m_blocks{ }
   , m_nonEmptyBlocks{ }
 {
@@ -217,10 +158,9 @@ template<typename Ty>
 void
 BlockCollection2<Ty>::initBlocks()
 {
-  const glm::u64vec3& nb = m_numBlocks;
+  const glm::u64vec3& nb = volume().lower().dims();
   // reset volume dimensions based on number of blocks.
-  m_volDims = m_blockDims * m_numBlocks;
-  const glm::u64vec3& vd = m_volDims;
+  const glm::u64vec3& vd = volume().dims();
 
 
   // block world dims
@@ -294,7 +234,7 @@ BlockCollection2<Ty>::computeVolumeStatistics(BufferedReader<Ty> &r)
 
     Info() << "CO: Finding min/max for this buffer.";
     tbb::blocked_range<size_t> range(0, buf->elements());
-    ParallelMinMax<Ty> mm(buf->ptr());
+    ParallelMinMax<Ty> mm(buf);
     tbb::parallel_reduce(range, mm);
 
     if (mm.min_value < min)
@@ -328,14 +268,14 @@ template<typename Ty>
 void
 BlockCollection2<Ty>::computeBlockStatistics(BufferedReader<Ty> &r)
 {
-  Info() << "Computing block statistics for " << m_blocks.size() << " blocks.";
-
-  while(r.hasNext()) {
-    Buffer<Ty> *buf = r.waitNext();
-    Info() << "CO: Got buffer of " << buf->elements() << " elements.";
-    Ty *p = buf->ptr();
-
-  }
+//  Info() << "Computing block statistics for " << m_blocks.size() << " blocks.";
+//
+//  while(r.hasNext()) {
+//    Buffer<Ty> *buf = r.waitNext();
+//    Info() << "CO: Got buffer of " << buf->elements() << " elements.";
+//    Ty *p = buf->ptr();
+//
+//  }
 //  const Ty *buf{ r.buffer_ptr() };
 //
 //  // voxel index within the entire volume
@@ -447,48 +387,6 @@ BlockCollection2<Ty>::addBlock(const FileBlock& b)
 
 
 ///////////////////////////////////////////////////////////////////////////////
-template<typename Ty>
-glm::u64vec3
-BlockCollection2<Ty>::blockDims() const
-{
-  return m_blockDims;
-}
-
-
-///////////////////////////////////////////////////////////////////////////////
-template<typename Ty>
-void
-BlockCollection2<Ty>::blockDims(const glm::u64vec3& dims)
-{
-  m_blockDims = dims;
-}
-
-
-///////////////////////////////////////////////////////////////////////////////
-template<typename Ty>
-glm::u64vec3
-BlockCollection2<Ty>::volDims() const
-{
-  return m_volDims;
-}
-
-
-///////////////////////////////////////////////////////////////////////////////
-template<typename Ty>
-void
-BlockCollection2<Ty>::volDims(const glm::u64vec3& voldims)
-{
-  m_volDims = voldims;
-}
-
-
-///////////////////////////////////////////////////////////////////////////////
-template<typename Ty>
-glm::u64vec3
-BlockCollection2<Ty>::numBlocks() const
-{
-  return m_numBlocks;
-}
 
 
 ///////////////////////////////////////////////////////////////////////////////

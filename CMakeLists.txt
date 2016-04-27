@@ -28,7 +28,6 @@ if (UNIX)
 #    set(CMAKE_RANLIB "/usr/local/bin/ranlib")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall \
     -Wno-missing-braces \
-    -fopenmp \
     -fdiagnostics-color=auto" )
 
 #    -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP \
@@ -45,6 +44,7 @@ find_package(GLM REQUIRED)
 include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/tclap/include"
     "${GLM_INCLUDE_DIRS}"
+    "/usr/local/include"
 #    "${CUDA_INCLUDE_DIRS}"
 )
 
@@ -57,7 +57,7 @@ add_executable(
     "${preproc_SOURCES}"
 )
 
-#link_directories("/opt/cuda/lib64/")
+link_directories("/usr/local/lib/")
 target_link_libraries(preproc "tbb")
 
 ###########################################################################

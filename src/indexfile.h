@@ -72,26 +72,26 @@ const uint32_t HEAD_LEN{ sizeof(IndexFileHeader) };
 std::ostream& operator<<(std::ostream& os, const IndexFileHeader& h);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// \brief This rediculousness allows using templated BlockCollection2 without
+/// \brief Allows using the BlockCollection2 template without
 ///        exposing the templated-ness of BlockCollection2, since we don't
 ///        know what type of BC2 we need until runtime.
 ///////////////////////////////////////////////////////////////////////////////
-class base_collection_wrapper {
+class collection_wrapper_base {
 public:
-  virtual ~base_collection_wrapper() { }
+  virtual ~collection_wrapper_base() { }
 
   virtual void addBlock(const FileBlock&) = 0;
   virtual const std::vector<FileBlock*>& blocks() = 0;
   virtual const std::vector<FileBlock*>& nonEmptyBlocks() = 0;
-  virtual void filterBlocks(const std::string &rawFile, size_t buffSize, 
-      float min, float max, bool normalize=true) = 0;
-//  virtual void filterBlocks(std::ifstream &, float min, float max) = 0;
-  virtual glm::u64vec3 numBlocks() = 0;
-  virtual glm::u64vec3 volDims() = 0;
-  virtual glm::u64vec3 blockDims() = 0;
-  virtual double volMin() = 0;
-  virtual double volMax() = 0;
-  virtual double volAvg() = 0;
+  virtual void filterBlocks(const std::string &rawFile, size_t buffSize,
+                            float min, float max, bool normalize=true) = 0;
+  virtual const Volume& volume() = 0;
+//  virtual glm::u64vec3 numBlocks() = 0;
+//  virtual glm::u64vec3 volDims() = 0;
+//  virtual glm::u64vec3 blockDims() = 0;
+//  virtual double volMin() = 0;
+//  virtual double volMax() = 0;
+//  virtual double volAvg() = 0;
 
 };
 
@@ -100,7 +100,7 @@ public:
 /// \sa base_collection_wrapper
 ///////////////////////////////////////////////////////////////////////////////
 template<typename Ty>
-class collection_wrapper : public base_collection_wrapper
+class collection_wrapper : public collection_wrapper_base
 {
 public:
 
@@ -109,61 +109,19 @@ public:
   {
   }
 
-
-  void addBlock(const FileBlock &b) override
-  {
-    c.addBlock(b);
-  }
-
-
-  const std::vector<FileBlock*>& blocks() override
-  {
-    return c.blocks();
-  }
-
-
-  const std::vector<FileBlock*>& nonEmptyBlocks() override
-  {
-    return c.nonEmptyBlocks();
-  }
-
-
-  void filterBlocks(const std::string &rawFile, size_t buffSize, 
+  void filterBlocks(const std::string &rawFile, size_t buffSize,
       float min, float max, bool normalize=false) override
   {
     c.filterBlocks(rawFile, buffSize, min, max, normalize);
   }
 
+  void addBlock(const FileBlock &b) override { c.addBlock(b); }
 
-  glm::u64vec3 numBlocks() override
-  {
-    return c.numBlocks();
-  }
+  const Volume& volume() override { return c.volume(); }
 
-  glm::u64vec3 volDims() override
-  {
-    return c.volDims();
-  }
+  const std::vector<FileBlock*>& blocks() override { return c.blocks(); }
 
-  glm::u64vec3 blockDims() override
-  {
-    return c.blockDims();
-  }
-
-  double volMin() override
-  {
-    return c.volMin();
-  }
-
-  double volMax() override
-  {
-    return c.volMax();
-  }
-
-  double volAvg() override
-  {
-    return c.volAvg();
-  }
+  const std::vector<FileBlock*>& nonEmptyBlocks() override { return c.nonEmptyBlocks(); }
 
 private:
   BlockCollection2<Ty> c;
@@ -232,7 +190,7 @@ public:
   const std::vector<FileBlock*>&
   blocks() const;
 
-  static base_collection_wrapper* 
+  static collection_wrapper_base*
   make_wrapper
   (
     DataType type, 
@@ -250,7 +208,7 @@ private:
 
   IndexFileHeader m_header;
   std::string m_fileName;
-  base_collection_wrapper *m_col;
+  collection_wrapper_base *m_col;
 
 };
 
