@@ -39,30 +39,32 @@ generateIndexFile(const CommandLineOptions &clo)
   float minmax[2];
   minmax[0] = clo.tmin;
   minmax[1] = clo.tmax;
-  //const size_t bufsz = 67'108'864;
+
   try {
-    std::shared_ptr<preproc::IndexFile> indexFile{
+    preproc::IndexFile * indexFile{ 
         preproc::IndexFile::fromRawFile(
             clo.inFile,
             clo.bufferSize,
             preproc::to_dataType(clo.dataType),
             clo.vol_dims,
             clo.num_blks,
-            minmax)
-    };
+            minmax) };
 
     switch (clo.outputFileType) {
+
     case OutputType::Ascii: {
       std::string outFileName{ makeFileNameString(clo, ".json") };
       indexFile->writeAsciiIndexFile(outFileName);
       break;
     }
+
     case OutputType::Binary: {
       std::string outFileName{ makeFileNameString(clo, ".bin") };
       indexFile->writeBinaryIndexFile(outFileName);
       break;
     }
-    }
+
+    } //switch
 
     if (clo.printBlocks) {
       std::stringstream ss;
@@ -73,7 +75,7 @@ generateIndexFile(const CommandLineOptions &clo)
       ss << "}\n";
     }
   } catch (std::runtime_error e) {
-    std::cerr << e.what() << std::endl;
+    //std::cerr << e.what() << std::endl;
     Err() << e.what();
   }
 }
@@ -83,7 +85,7 @@ void
 readIndexFile(const CommandLineOptions & clo)
 {
 
-  std::shared_ptr<preproc::IndexFile> index{
+  preproc::IndexFile * index{
       preproc::IndexFile::fromBinaryIndexFile(clo.inFile)
   };
 

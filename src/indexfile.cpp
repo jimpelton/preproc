@@ -1,10 +1,7 @@
 
 #include "indexfile.h"
+#include "blockaveragefilter.h"
 
-
-#include "fileblock.h"
-#include "blockcollection2.h"
-#include "datatypes.h"
 
 #include <glm/glm.hpp>
 
@@ -83,7 +80,8 @@ IndexFileHeader::getTypeInt(DataType ty)
 
 
 
-std::shared_ptr<IndexFile>
+//std::shared_ptr<IndexFile>
+IndexFile*
 IndexFile::fromRawFile
 (
     const std::string& path,
@@ -94,14 +92,26 @@ IndexFile::fromRawFile
     const float minmax[2]
 )
 {
-  std::shared_ptr<IndexFile> idxfile{ std::make_shared<IndexFile>() };
+
+  IndexFile *idxfile{ new IndexFile() };
   idxfile->m_fileName = path;
 
+  // make blockcollection2 object.
   idxfile->m_col = IndexFile::make_wrapper(type, num_vox, numblocks);
 
 
   // filter the blocks
-  idxfile->m_col->filterBlocks(idxfile->m_fileName, bufsz, minmax[0], minmax[1]);
+  //BlockAverageFilter filter(minmax[0], minmax[1]); 
+  idxfile->m_col->filterBlocks(idxfile->m_fileName, bufsz);
+
+//  for (FileBlock *b : m_col->blocks() {
+//    if (filter(b)){
+//        b->is_empty =  0;
+//    } else {
+//      b->is_empty = 1; 
+//      m_nonEmptyBlocks.push_back(b);
+//    }
+//  }
 
   idxfile->m_header.magic_number  = MAGIC;
   idxfile->m_header.version       = VERSION;
@@ -109,11 +119,11 @@ IndexFile::fromRawFile
 
   //TODO: add upper and lower volume boundaries.
   idxfile->m_header.numblocks[0] =
-      idxfile->m_col->volume().lower().numBlocks().x + idxfile->m_col->volume().upper().numBlocks().x;
+      idxfile->m_col->volume().lower().block_count().x; // + idxfile->m_col->volume().upper().block_count().x;
   idxfile->m_header.numblocks[1] =
-      idxfile->m_col->volume().lower().numBlocks().y + idxfile->m_col->volume().upper().numBlocks().y;
+      idxfile->m_col->volume().lower().block_count().y; // + idxfile->m_col->volume().upper().block_count().y;
   idxfile->m_header.numblocks[2] =
-      idxfile->m_col->volume().lower().numBlocks().z + idxfile->m_col->volume().upper().numBlocks().z;
+      idxfile->m_col->volume().lower().block_count().z; // + idxfile->m_col->volume().upper().block_count().z;
 
 
   idxfile->m_header.dataType = IndexFileHeader::getTypeInt(type);
@@ -130,12 +140,15 @@ IndexFile::fromRawFile
 
 
 ///////////////////////////////////////////////////////////////////////////////
-std::shared_ptr<IndexFile>
+//std::shared_ptr<IndexFile>
+IndexFile*
 IndexFile::fromBinaryIndexFile(const std::string& path)
 {
-  std::shared_ptr<IndexFile> idxfile{ std::make_shared<IndexFile>() };
+  //std::shared_ptr<IndexFile> idxfile{ std::make_shared<IndexFile>() };
+  IndexFile *idxfile{ new IndexFile() };
   idxfile->m_fileName = path;
   idxfile->readBinaryIndexFile();
+
   return idxfile;
 }
 
@@ -251,8 +264,11 @@ IndexFile::writeBinaryIndexFile(const std::string& outpath)
 void
 IndexFile::writeAsciiIndexFile(std::ostream& os)
 {
-  os << "\"index\": {\n";
-  os << m_header << ",\n";
+  // os << "\"index\": {\n";
+  //
+  // Open outer JSON object
+  os << "{\n";
+  os << m_header << ",\n\"blocks\": { \n";
 
   auto blocks = m_col->blocks();
   for (size_t i{ 0 }; i<blocks.size()-1; ++i) {
@@ -261,7 +277,7 @@ IndexFile::writeAsciiIndexFile(std::ostream& os)
   os << *blocks[blocks.size()-1] << "\n";
 
 
-  os << "}\n";
+  os << "}}\n";
 }
 
 
@@ -329,16 +345,17 @@ FileBlock::to_string() const
 {
   std::stringstream ss;
   ss <<
-    "  \"block_" << block_index << "\": {\n"
-    "  \"index\":" << block_index << ",\n"
-    "  \"data_offset\": " << data_offset << ",\n"
-    "  \"voxel_dims\": [" << voxel_dims[0] << ", " << voxel_dims[1] << ", " << voxel_dims[2] << "],\n"
-    "  \"world_pos\": [" << world_pos[0] << ", " << world_pos[1] << ", " << world_pos[2] << "],\n"
-    "  \"min_val\": " << min_val << ",\n"
-    "  \"max_val\": " << max_val << ",\n"
-    "  \"avg_val\": " << avg_val << ",\n"
-    "  \"empty\": " << (is_empty ? "true" : "false") << "\n"
-    "}";
+    "   \"block_" << block_index << "\": {\n"
+    "      \"index\":" << block_index << ",\n"
+    "      \"data_offset\": " << data_offset << ",\n"
+    "      \"voxel_dims\": [" << voxel_dims[0] << ", " << voxel_dims[1] << ", " << voxel_dims[2] << "],\n"
+    "      \"world_pos\": [" << world_pos[0] << ", " << world_pos[1] << ", " << world_pos[2] << "],\n"
+    "      \"min_val\": " << min_val << ",\n"
+    "      \"max_val\": " << max_val << ",\n"
+    "      \"avg_val\": " << avg_val << ",\n"
+    "      \"total_val\": " << total_val << ",\n"
+    "      \"empty\": " << (is_empty ? "true" : "false") << "\n"
+    "   }";
 
   return ss.str();
 }

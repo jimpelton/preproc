@@ -123,7 +123,7 @@ private:  // methods
     char datetimebuf[20]; // "%F %T\0" = 20 chars
     std::strftime(datetimebuf, 20, "%F %T", std::localtime(&curtime));
     char buf2[20+8]; // "%s.%ld\0" = 28 chars
-    sprintf(buf2, "%s.%d", datetimebuf, tv.tv_usec);
+    sprintf(buf2, "%s.%ld", datetimebuf, tv.tv_usec);
 
     return std::string(buf2);
   }

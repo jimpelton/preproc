@@ -83,8 +83,8 @@ public:
   virtual void addBlock(const FileBlock&) = 0;
   virtual const std::vector<FileBlock*>& blocks() = 0;
   virtual const std::vector<FileBlock*>& nonEmptyBlocks() = 0;
-  virtual void filterBlocks(const std::string &rawFile, size_t buffSize,
-                            float min, float max, bool normalize=true) = 0;
+
+  virtual void filterBlocks(const std::string &rawFile, size_t buffSize) = 0 ;
   virtual const Volume& volume() = 0;
 //  virtual glm::u64vec3 numBlocks() = 0;
 //  virtual glm::u64vec3 volDims() = 0;
@@ -109,10 +109,11 @@ public:
   {
   }
 
+  template<typename ClassifierFunc>
   void filterBlocks(const std::string &rawFile, size_t buffSize,
-      float min, float max, bool normalize=false) override
+      ClassifierFunc isEmpty) override
   {
-    c.filterBlocks(rawFile, buffSize, min, max, normalize);
+    c.filterBlocks<ClassifierFunc>(rawFile, buffSize, isEmpty);
   }
 
   void addBlock(const FileBlock &b) override { c.addBlock(b); }
@@ -145,7 +146,9 @@ public:
   /// \param nummax The min and max block averages to use for threshold values 
   ///               when filtering blocks.
   ///////////////////////////////////////////////////////////////////////////////
-  static std::shared_ptr<IndexFile> 
+//  static std::shared_ptr<IndexFile> 
+  static
+  IndexFile*    
   fromRawFile
   (
     const std::string &path,
@@ -160,7 +163,9 @@ public:
   ///////////////////////////////////////////////////////////////////////////////
   /// \brief Create IndexFile from an existing binary index file.
   ///////////////////////////////////////////////////////////////////////////////
-  static std::shared_ptr<IndexFile> 
+  //static std::shared_ptr<IndexFile> 
+  static
+  IndexFile*    
   fromBinaryIndexFile(const std::string &path);
 
 

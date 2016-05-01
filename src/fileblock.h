@@ -9,6 +9,8 @@
 #include <ostream>
 #include <sstream>
 #include <limits>
+//#include <atomic>
+
 
 namespace preproc
 {
@@ -52,7 +54,8 @@ struct FileBlock
       , world_pos{ 0 }
       , min_val{ std::numeric_limits<decltype(min_val)>::max() }
       , max_val{ std::numeric_limits<decltype(max_val)>::min() }
-      , avg_val{ 0.0f }
+      , avg_val{ 0.0 }
+      , total_val{ 0.0 }
       , is_empty{ 0 }
   { }
 
@@ -66,6 +69,7 @@ struct FileBlock
   double min_val;           ///< The min value found in this block.
   double max_val;           ///< The largest value found in this block.
   double avg_val;           ///< Average value within this block.
+  double total_val;
   uint32_t is_empty;        ///< If this block is empty or not.
 
 }; // struct FileBlock

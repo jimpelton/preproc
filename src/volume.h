@@ -20,26 +20,30 @@ public:
   Region(const glm::u64vec3 &blockDims, const glm::u64vec3 &count)
       : m_blockDims { blockDims }
       , m_count{ count }
+      , m_voxStart{ 0, 0, 0 }
   { }
 
   ~Region() { }
 
   /////////////////////////////////////////////////////////////////////////////////
-  /// \brief Set dimensions of the blocks in this region.
+  /// \brief Get/Set dimensions of the blocks in this region.
   /////////////////////////////////////////////////////////////////////////////////
-  void dims(const glm::u64vec3 & dims);
-
-
-  /////////////////////////////////////////////////////////////////////////////////
-  /// \brief Get dimensions of the blocks in this region.
-  /////////////////////////////////////////////////////////////////////////////////
-  const glm::u64vec3& dims() const;
+  void block_dims(const glm::u64vec3 &dims);
+  const glm::u64vec3& block_dims() const;
+  glm::u64vec3& block_dims();
 
   //////////////////////////////////////////////////////////////////////////////
-  /// \brief Get the number of blocks along each axis.
+  /// \brief Get/Set the number of blocks along each axis.
   //////////////////////////////////////////////////////////////////////////////
-  const glm::u64vec3& count() const;
-  void count(const glm::u64vec3 &);
+  const glm::u64vec3& block_count() const;
+  void block_count(const glm::u64vec3 &);
+//  glm::u64vec3& block_count();
+
+  //////////////////////////////////////////////////////////////////////////////
+  /// \brief Get/Set the starting voxel.
+  //////////////////////////////////////////////////////////////////////////////
+  const glm::u64vec3& vox_start() const;
+  void vox_start(const glm::u64vec3& m);
 
 private:
   glm::u64vec3 m_blockDims; ///< Dimensions of a block, in voxels.
@@ -57,7 +61,6 @@ public:
 
   Volume(const glm::u64vec3 &volDims, const glm::u64vec3 &numBlocks)
     : m_lowerRegion{ volDims / numBlocks, numBlocks }
-    , m_upperRegion{ volDims % numBlocks,  }
     , m_volDims{ volDims }
     , m_volMax{ std::numeric_limits<double>::min() }
     , m_volMin{ std::numeric_limits<double>::max() }
@@ -66,9 +69,10 @@ public:
 
   ~Volume() { }
 
-  /// \brief Get the volume's dimensions in voxels
+  //////////////////////////////////////////////////////////////////////////////
+  /// \brief Get/Set the volume's dimensions in voxels
+  //////////////////////////////////////////////////////////////////////////////
   const glm::u64vec3 & dims() const;
-  /// \brief Set the volume's dimensions in voxels
   void dims(const glm::u64vec3 & voldims);
 
   double min() const;
@@ -78,13 +82,13 @@ public:
   double avg() const;
   void avg(double);
 
-  const Region& lower() const { return m_lowerRegion; }
-  Region& lower() { return m_lowerRegion; }
-  void lower(const Region &lower) { m_lowerRegion = lower; }
+  const Region & lower() const;
+  Region& lower();
+  void lower(const Region &lower);
 
-  const Region & upper() const { return m_upperRegion; }
-  Region & upper() { return m_upperRegion; }
-  void upper(const Region &upper) { m_upperRegion = upper; }
+//  const Region & upper() const { return m_upperRegion; }
+//  Region & upper() { return m_upperRegion; }
+//  void upper(const Region &upper) { m_upperRegion = upper; }
 
 private:
 
@@ -93,7 +97,7 @@ private:
   /// \brief The last row,col,slab of blocks in the volume which contains the
   ///        smaller set of blocks for the remaining voxels that didn't fit into
   ///        the blocks of the lower volume.
-  Region m_upperRegion;
+  //Region m_upperRegion;
 
   glm::u64vec3 m_volDims;   ///< Volume dimensions in voxels.
   double m_volMax;          ///< Max value found in volume.

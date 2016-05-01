@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <string>
+#include <limits>
 
 int 
 parseThem(int argc, const char *argv[], CommandLineOptions &opts)
@@ -83,10 +84,12 @@ try {
   cmd.add(bufferSizeArg);
 
   // threshold min/max
-  TCLAP::ValueArg<float> tmin("", "tmin", "Thresh min", false, 0.0, "float");
+  TCLAP::ValueArg<float> tmin("", "tmin", "Thresh min", false, 
+          std::numeric_limits<float>::min(), "float");
   cmd.add(tmin);
 
-  TCLAP::ValueArg<float> tmax("", "tmax", "Thresh max", false, 1.0, "float");
+  TCLAP::ValueArg<float> tmax("", "tmax", "Thresh max", false, 
+          std::numeric_limits<float>::max(), "float");
   cmd.add(tmax);
 
 
