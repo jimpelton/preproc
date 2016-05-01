@@ -1,0 +1,102 @@
+{
+"header": {
+  "magic": 7376,
+  "version": 1,
+  "header_length": 88,
+  "num_blocks": [2, 2, 2],
+  "data_type": "uchar",
+  "num_vox": [3509, 3787, 4096],
+  "vol_min": 1,
+  "vol_max": 156,
+  "vol_avg": 6.81902
+},
+"blocks": { 
+   "block_0": {
+      "index":0,
+      "data_offset": 0,
+      "voxel_dims": [1754, 1893, 2048],
+      "world_pos": [-0.25, -0.25, -0.25],
+      "min_val": 2,
+      "max_val": 144,
+      "avg_val": 3.36928,
+      "total_val": 2.29112e+10,
+      "empty": true
+   },
+   "block_1": {
+      "index":1,
+      "data_offset": 1754,
+      "voxel_dims": [1754, 1893, 2048],
+      "world_pos": [0.25, -0.25, -0.25],
+      "min_val": 2,
+      "max_val": 71,
+      "avg_val": 3.44211,
+      "total_val": 2.34064e+10,
+      "empty": true
+   },
+   "block_2": {
+      "index":2,
+      "data_offset": 6642537,
+      "voxel_dims": [1754, 1893, 2048],
+      "world_pos": [-0.25, 0.25, -0.25],
+      "min_val": 2,
+      "max_val": 156,
+      "avg_val": 4.27457,
+      "total_val": 2.90671e+10,
+      "empty": true
+   },
+   "block_3": {
+      "index":3,
+      "data_offset": 6644291,
+      "voxel_dims": [1754, 1893, 2048],
+      "world_pos": [0.25, 0.25, -0.25],
+      "min_val": 2,
+      "max_val": 77,
+      "avg_val": 4.42518,
+      "total_val": 3.00913e+10,
+      "empty": true
+   },
+   "block_4": {
+      "index":4,
+      "data_offset": 27215017984,
+      "voxel_dims": [1754, 1893, 2048],
+      "world_pos": [-0.25, -0.25, 0.25],
+      "min_val": 2,
+      "max_val": 121,
+      "avg_val": 3.36687,
+      "total_val": 2.28948e+10,
+      "empty": true
+   },
+   "block_5": {
+      "index":5,
+      "data_offset": 27215019738,
+      "voxel_dims": [1754, 1893, 2048],
+      "world_pos": [0.25, -0.25, 0.25],
+      "min_val": 2,
+      "max_val": 96,
+      "avg_val": 3.56717,
+      "total_val": 2.42568e+10,
+      "empty": true
+   },
+   "block_6": {
+      "index":6,
+      "data_offset": 27221660521,
+      "voxel_dims": [1754, 1893, 2048],
+      "world_pos": [-0.25, 0.25, 0.25],
+      "min_val": 1,
+      "max_val": 156,
+      "avg_val": 4.56947,
+      "total_val": 3.10725e+10,
+      "empty": true
+   },
+   "block_7": {
+      "index":7,
+      "data_offset": 27221662275,
+      "voxel_dims": [1754, 1893, 2048],
+      "world_pos": [0.25, 0.25, 0.25],
+      "min_val": 2,
+      "max_val": 68,
+      "avg_val": 4.4611,
+      "total_val": 3.03355e+10,
+      "empty": true
+   }
+}}

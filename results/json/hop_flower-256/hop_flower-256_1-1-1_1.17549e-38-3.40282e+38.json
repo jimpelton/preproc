@@ -1,0 +1,25 @@
+{
+"header": {
+  "magic": 7376,
+  "version": 1,
+  "header_length": 88,
+  "num_blocks": [1, 1, 1],
+  "data_type": "uchar",
+  "num_vox": [233, 252, 272],
+  "vol_min": 2,
+  "vol_max": 112,
+  "vol_avg": 6.81592
+},
+"blocks": { 
+   "block_0": {
+      "index":0,
+      "data_offset": 0,
+      "voxel_dims": [233, 252, 272],
+      "world_pos": [0, 0, 0],
+      "min_val": 2,
+      "max_val": 112,
+      "avg_val": 0.843847,
+      "total_val": 1.34769e+07,
+      "empty": false
+   }
+}}
