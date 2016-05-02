@@ -86,12 +86,6 @@ public:
 
   virtual void filterBlocks(const std::string &rawFile, size_t buffSize) = 0 ;
   virtual const Volume& volume() = 0;
-//  virtual glm::u64vec3 numBlocks() = 0;
-//  virtual glm::u64vec3 volDims() = 0;
-//  virtual glm::u64vec3 blockDims() = 0;
-//  virtual double volMin() = 0;
-//  virtual double volMax() = 0;
-//  virtual double volAvg() = 0;
 
 };
 
@@ -109,11 +103,9 @@ public:
   {
   }
 
-  template<typename ClassifierFunc>
-  void filterBlocks(const std::string &rawFile, size_t buffSize,
-      ClassifierFunc isEmpty) override
+  void filterBlocks(const std::string &rawFile, size_t buffSize) override
   {
-    c.filterBlocks<ClassifierFunc>(rawFile, buffSize, isEmpty);
+    c.filterBlocks(rawFile, buffSize);
   }
 
   void addBlock(const FileBlock &b) override { c.addBlock(b); }
@@ -146,26 +138,16 @@ public:
   /// \param nummax The min and max block averages to use for threshold values 
   ///               when filtering blocks.
   ///////////////////////////////////////////////////////////////////////////////
-//  static std::shared_ptr<IndexFile> 
-  static
-  IndexFile*    
-  fromRawFile
-  (
-    const std::string &path,
-    size_t bufsz,
-    DataType type,
-    const uint64_t numVox[3],
-    const uint64_t numBlks[3],
-    const float minmax[2]
-  );
+  static IndexFile*
+  fromRawFile(const std::string &path, size_t bufsz, DataType type,
+    const uint64_t numVox[3], const uint64_t numBlks[3], const float minmax[2]);
 
 
   ///////////////////////////////////////////////////////////////////////////////
   /// \brief Create IndexFile from an existing binary index file.
   ///////////////////////////////////////////////////////////////////////////////
   //static std::shared_ptr<IndexFile> 
-  static
-  IndexFile*    
+  static IndexFile*
   fromBinaryIndexFile(const std::string &path);
 
 
@@ -196,12 +178,7 @@ public:
   blocks() const;
 
   static collection_wrapper_base*
-  make_wrapper
-  (
-    DataType type, 
-    const uint64_t num_vox[3],
-    const uint64_t numblocks[3]
-  );
+  make_wrapper(DataType type, const uint64_t num_vox[3], const uint64_t numblocks[3]);
 
 
 private:

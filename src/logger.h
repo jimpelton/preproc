@@ -16,17 +16,99 @@
 
 namespace preproc {
 
-enum class LogLevel
-{
-  INFO, DEBUG, ERROR
-};
 
 class logger
 {
 public:
 
   /////////////////////////////////////////////////////////////////////////////
-  static logger &get(LogLevel level = LogLevel::INFO)
+  /// \brief class sentry
+  /////////////////////////////////////////////////////////////////////////////
+  class sentry
+  {
+    logger &log;
+
+  public:
+    sentry(logger &l)
+      : log(l)
+    {
+      log.lock();
+      log.start_line();
+    }
+
+    ~sentry()
+    {
+      log.end_line();
+      log.unlock();
+    }
+
+
+    template<typename T>
+    sentry& operator<<(T t)
+    {
+      log.do_log(t);
+      return *this;
+    }
+
+
+    sentry& operator<<(std::ostream & (*man)(std::ostream &))
+    {
+      // Handles manipulators like endl.
+      log.do_log(man);
+      return *this;
+    }
+
+
+    sentry& operator<<(std::ios_base & (*man)(std::ios_base &))
+    {
+      log.do_log(man);
+      // Handles manipulators like hex.
+      return *this;
+    }
+
+  }; // sentry
+
+
+  /////////////////////////////////////////////////////////////////////////////
+  /// \brief enum class LogLevel
+  /////////////////////////////////////////////////////////////////////////////
+  enum class LogLevel
+  {
+    INFO, DEBUG, ERROR
+  };
+
+
+  /////////////////////////////////////////////////////////////////////////////
+  /// \brief Create logger that logs to stdout.
+  /////////////////////////////////////////////////////////////////////////////
+  logger()
+    : m_out{ std::cout }
+    , m_level{ LogLevel::INFO }
+    , m_levelString{ "INFO" }
+    //, m_guard{ m_mutex, std::defer_lock }
+  {
+    switch(m_level) {
+    case LogLevel::DEBUG: m_levelString = "DEBUG"; break;
+    case LogLevel::ERROR: m_levelString = "ERROR"; break;
+    case LogLevel::INFO:
+    default: m_levelString  = "INFO"; break;
+    }
+  }
+
+  /////////////////////////////////////////////////////////////////////////////
+  /// \brief And new line and flush output stream.
+  /////////////////////////////////////////////////////////////////////////////
+  ~logger()
+  {
+    m_out << "\n";
+    m_out.flush();
+
+    s_instance = nullptr;
+
+  }
+
+  /////////////////////////////////////////////////////////////////////////////
+  static logger& get(LogLevel level = LogLevel::INFO)
   {
     if (s_instance == nullptr) {
       s_instance = new logger();
@@ -42,80 +124,60 @@ public:
   /////////////////////////////////////////////////////////////////////////////
   static void shutdown()
   {
-    get().do_log("Shutdown logger.");
+    get().do_log("\nShutdown logger.");
     delete s_instance;
   }
 
   /////////////////////////////////////////////////////////////////////////////
-  logger&
-  start_line()
+  void start_line()
   {
     std::thread::id tid = std::this_thread::get_id();
-    std::stringstream ss;
-    ss << "\n- " << now() << " (" << std::hex << tid << std::dec << ") "
+    //std::stringstream ss;
+    m_out << "- " << now() << " (" << std::hex << tid << std::dec << ") "
         << m_levelString << ":\t";
 
-    m_writeMutex.lock();
-    *m_out << ss.str();
-    m_writeMutex.unlock();
-
-    return *this;
+    //m_out << ss.str();
   }
+
+  /////////////////////////////////////////////////////////////////////////////
+  void end_line()
+  {
+    m_out << std::endl;
+  }
+
 
   /////////////////////////////////////////////////////////////////////////////
   template<typename T>
-  logger&
-  do_log(T t)
+  void do_log(T t)
   {
-    m_writeMutex.lock();
-    *m_out << t;
-    m_writeMutex.unlock();
-    return *this;
+    m_out << t;
   }
-
-
-  ~logger()
-  {
-    *m_out << "\n";
-    m_out->flush();
-
-    if (m_ownsStream) {
-      delete m_out;
-      m_out = nullptr;
-    }
-
-    s_instance = nullptr;
-
-  }
-
-
-private:  // methods
 
 
   /////////////////////////////////////////////////////////////////////////////
-  /// \brief Create logger that logs to stdout.
-  /////////////////////////////////////////////////////////////////////////////
-  logger()
-    : m_out{ &(std::cout) }
-//    , m_file{ nullptr }
-    , m_ownsStream{ false }
-    , m_level{ LogLevel::INFO }
-    , m_levelString{ "INFO" }
+  template<typename T>
+  sentry operator<<(T t)
   {
-    switch(m_level) {
-      case LogLevel::DEBUG: m_levelString = "DEBUG"; break;
-      case LogLevel::ERROR: m_levelString = "ERROR"; break;
-      case LogLevel::INFO:
-      default: m_levelString  = "INFO"; break;
-    }
-
-//    m_out = std::cout;
+    return sentry(*this) << t;
   }
 
-  std::string now()
+  void lock()
   {
-//    auto now =
-//        std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    m_mutex.lock();
+  }
+
+  void unlock()
+  {
+    m_mutex.unlock();
+  }
+
+
+
+private:
+  /////////////////////////////////////////////////////////////////////////////
+  std::string
+  now()
+  {
     timeval tv;
     time_t curtime;
     gettimeofday(&tv, nullptr);
@@ -123,21 +185,26 @@ private:  // methods
     char datetimebuf[20]; // "%F %T\0" = 20 chars
     std::strftime(datetimebuf, 20, "%F %T", std::localtime(&curtime));
     char buf2[20+8]; // "%s.%ld\0" = 28 chars
+
+#ifdef __APPLE__
+    sprintf(buf2, "%s.%d", datetimebuf, tv.tv_usec);
+#else
     sprintf(buf2, "%s.%ld", datetimebuf, tv.tv_usec);
+#endif
 
     return std::string(buf2);
   }
 
 private:   // members
+
   static logger *s_instance;
 
-  std::ostream *m_out;
-//  std::ostream *m_file;
-  bool m_ownsStream;
+  std::ostream &m_out;
   LogLevel m_level;
   const char *m_levelString;
 
-  std::mutex m_writeMutex;
+  std::mutex m_mutex;
+  //std::unique_lock<std::mutex> m_guard;
 
 
 }; // class logger
@@ -145,27 +212,27 @@ private:   // members
 
 inline logger& Dbg()
 {
-  return logger::get(LogLevel::DEBUG).start_line();
+  return logger::get(logger::LogLevel::DEBUG); //.start_line();
 }
 inline logger& Err()
 {
-  return logger::get(LogLevel::ERROR).start_line();
+  return logger::get(logger::LogLevel::ERROR); //.start_line();
 }
 
 inline logger& Info()
 {
-  return logger::get(LogLevel::INFO).start_line();
+  return logger::get(logger::LogLevel::INFO); //.start_line();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// \brief Log it, whatever it is, it better have an operator<<()!
 ////////////////////////////////////////////////////////////////////////////////
-template<typename T>
-preproc::logger&
-operator<<(preproc::logger& log, T t)
-{
-  return log.do_log(t);
-}
+//template<typename T>
+//preproc::logger&
+//operator<<(preproc::logger& log, T t)
+//{
+//  return log.do_log(t);
+//}
 
 
 } //namespace preproc

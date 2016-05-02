@@ -100,18 +100,19 @@ IndexFile::fromRawFile
   idxfile->m_col = IndexFile::make_wrapper(type, num_vox, numblocks);
 
 
-  // filter the blocks
-  //BlockAverageFilter filter(minmax[0], minmax[1]); 
+  // build the block collection
   idxfile->m_col->filterBlocks(idxfile->m_fileName, bufsz);
 
-//  for (FileBlock *b : m_col->blocks() {
-//    if (filter(b)){
-//        b->is_empty =  0;
-//    } else {
-//      b->is_empty = 1; 
-//      m_nonEmptyBlocks.push_back(b);
-//    }
-//  }
+  // filter the blocks
+  BlockAverageFilter filter(minmax[0], minmax[1]);
+
+  for (FileBlock *b : idxfile->m_col->blocks()) {
+    if (filter(*b)){
+        b->is_empty =  0;
+    } else {
+      b->is_empty = 1;
+    }
+  }
 
   idxfile->m_header.magic_number  = MAGIC;
   idxfile->m_header.version       = VERSION;
@@ -140,7 +141,6 @@ IndexFile::fromRawFile
 
 
 ///////////////////////////////////////////////////////////////////////////////
-//std::shared_ptr<IndexFile>
 IndexFile*
 IndexFile::fromBinaryIndexFile(const std::string& path)
 {

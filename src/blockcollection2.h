@@ -298,10 +298,10 @@ BlockCollection2<Ty>::computeVolumeStatistics(BufferedReader<Ty> &r)
     Buffer<Ty> *buf = r.waitNext();
     Info() << "CO: Got buffer of " << buf->elements() << " elements.";
 
+    // Sum values in this buffer
     volsum += doBufferSum(buf);
 
-    // Compute the min/max values of the volume and a bunch of work on 
-    // each block.
+    // Compute the min/max values of the volume and a bunch of work on each block.
     Info() << "CO: Finding min/max for this buffer.";
     tbb::blocked_range<size_t> range(0, buf->elements());
     ParallelMinMax<Ty> mm(buf); 
@@ -371,7 +371,7 @@ void
 BlockCollection2<Ty>::filterBlocks
 (
     const std::string &file,
-    size_t bufSize,
+    size_t bufSize
 )
 {
 

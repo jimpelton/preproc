@@ -27,19 +27,34 @@
 # --nbz 32 \
 # --buffer-size 32M
 
-#echo "${OMP_NUM_THREADS}"
+#build_clion/Debug/preproc \
+#--in-file "/Volumes/Untitled/INL/Josh_Kane/hop_flower/Hop_Flower-Resampled-3509x3787x4096.raw" \
+#--dat-file "/Volumes/Untitled/INL/Josh_Kane/hop_flower/Hop_Flower-Resampled-3509x3787x4096.dat" \
+#--outfile-prefix hop_flower-4096 \
+#--output-format ascii \
+#--generate \
+#--tmax 30.0 \
+#--tmin 6.0 \
+#--nbx 32 \
+#--nby 32 \
+#--nbz 32 \
+#--buffer-size 8G
+
+
+
+
 build/preproc \
---in-file "/mnt/4tb/VolumeData/INL/Josh_Kane/hop_flower/Hop_Flower-Resampled-3509x3787x4096.raw" \
---dat-file "/mnt/4tb/VolumeData/INL/Josh_Kane/hop_flower/Hop_Flower-Resampled-3509x3787x4096.dat" \
---outfile-prefix hop_flower-4096 \
+--in-file "/Users/jim/Documents/thesis/volumes/hop_flower/9-13-13 CT Volume Hop Flower-512.raw" \
+--dat-file "/Users/jim/Documents/thesis/volumes/hop_flower/9-13-13 CT Volume Hop Flower-512.dat" \
+--outfile-prefix hop_flower-512 \
 --output-format ascii \
 --generate \
 --tmax 30.0 \
---tmin 7.0 \
+--tmin 6.0 \
 --nbx 32 \
 --nby 32 \
 --nbz 32 \
---buffer-size 20G
+--buffer-size 64M
 
 #build/preproc \
 #--in-file "/mnt/4tb/VolumeData/INL/Josh_Kane/hop_flower/Hop_Flower-Resampled-3509x3787x4096.raw" \

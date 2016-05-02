@@ -4,6 +4,8 @@
 
 set(preproc_HEADERS
     "${CMAKE_CURRENT_SOURCE_DIR}/cmdline.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/blockaverage.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/blockaveragefilter.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/blockcollection2.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/bufferedreader.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/buffer.h"
