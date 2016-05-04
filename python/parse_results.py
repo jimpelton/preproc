@@ -1,9 +1,15 @@
+"""
+Convenience methods for parsing the json results produced by preproc.
+
+Jim Pelton -- May 2016
+"""
+
 import os
 import json
-from pprint import pprint
 import re
+
 import numpy as np
-from scipy import stats
+# from scipy import stats
 import matplotlib.pyplot as plt
 
 
@@ -44,12 +50,14 @@ def all_files_data(dir_name):
               ...
            [ 'block_0', ..., 'block_N' ]
        ]
+       :param dir_name: a path object for the directory to scan.
+       :return a list with json data for all files in dir_name, and a matching list or sorted keys for each block
     """
     all_files_data_list = []
     all_files = os.listdir(dir_name)
     all_files.sort(key=natural_keys)
     for f in all_files:
-        with open(dir_name + f) as data_file:
+        with open(os.path.join(dir_name, f)) as data_file:
             all_files_data_list.append(json.load(data_file))
 
     keys_sorted = []
@@ -91,9 +99,17 @@ def compute_average_of_all_block_averages_for_all_the_files(all_files_data_list)
     return average_of_average_values
 
 
+def compute_histogram_for_block_object(block_object, num_bins):
+    averages = []
+    for key in block_object:
+        averages.append(block_object[key]['avg_val'])
+
+    return np.histogram(averages, bins=num_bins)
+
+
 def main(args):
     # dir_name = '../json/hop_flower-512/'
-    dir_name = '/Users/jim/Documents/thesis/code/preproc.git/results/json/hop_flower-512/'
+    dir_name = os.path.normpath(args[1])
     all_files_data_list, keys_sorted = all_files_data(dir_name)
     average_of_average_values = compute_average_of_all_block_averages_for_all_the_files(all_files_data_list)
 
