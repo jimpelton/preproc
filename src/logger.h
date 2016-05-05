@@ -35,7 +35,7 @@ public:
       : log(l)
     {
       log.lock();
-      std::cout << "sentry ctor after lock.\n";
+//      std::cout << "sentry ctor after lock.\n";
       log.start_line();
     }
 
@@ -43,7 +43,7 @@ public:
     sentry(const sentry& o)
       : log{o.log}
     {
-      std::cout << "sentry copy ctor.\n";
+//      std::cout << "sentry copy ctor.\n";
     }
 
 
@@ -51,7 +51,7 @@ public:
     sentry(sentry &&o)
       : log{ o.log }
     {
-      std::cout << "sentry move ctor.\n";
+//      std::cout << "sentry move ctor.\n";
     }
 
 
@@ -60,7 +60,7 @@ public:
     {
       log.end_line();
       log.unlock();
-      std::cout << "sentry dtor after unlock.\n";
+//      std::cout << "sentry dtor after unlock.\n";
     }
 
 
@@ -68,7 +68,7 @@ public:
     /// \brief Log a message for parameter t.
     /////////////////////////////////////////////////////////////////////////////
     template<typename T>
-    sentry& operator<<(T t)
+    sentry& operator<<(const T& t)
     {
       log.do_log(t);
       return *this;
@@ -179,7 +179,7 @@ public:
 
   /////////////////////////////////////////////////////////////////////////////
   template<typename T>
-  void do_log(T t)
+  void do_log(const T& t)
   {
     m_out << t;
   }
@@ -187,7 +187,7 @@ public:
 
   /////////////////////////////////////////////////////////////////////////////
   template<typename T>
-  sentry operator<<(T t)
+  sentry operator<<(const T& t)
   {
     sentry s(*this);
     s << t;
