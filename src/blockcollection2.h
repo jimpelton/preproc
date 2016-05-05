@@ -277,7 +277,7 @@ void
 BlockCollection2<Ty>::doBlockAvg(){
   for(FileBlock* b : m_blocks) {
     b->avg_val = b->total_val / (b->voxel_dims[0] * b->voxel_dims[1] * b->voxel_dims[2]);
-    std::cout << b->avg_val << std::endl;
+//    std::cout << b->avg_val << std::endl;
   }
 }
 
@@ -337,7 +337,7 @@ BlockCollection2<Ty>::computeVolumeStatistics(BufferedReader<Ty> &r)
   m_volume.avg(volsum / (m_volume.dims().x * m_volume.dims().y * m_volume.dims().z));
 
   // Average the blocks!
-  //doBlockAvg();  
+  doBlockAvg();
 
   Info() << "Done computing volume statistics "
         << m_volume.min() << ", " << m_volume.max() << ", " << m_volume.avg()
@@ -363,9 +363,6 @@ BlockCollection2<Ty>::addBlock(const FileBlock& b)
 
 
 ///////////////////////////////////////////////////////////////////////////////
-
-
-///////////////////////////////////////////////////////////////////////////////
 template<typename Ty>
 void
 BlockCollection2<Ty>::filterBlocks
@@ -384,12 +381,6 @@ BlockCollection2<Ty>::filterBlocks
   initBlocks();
 
   computeVolumeStatistics(r);
-
-  for (FileBlock *b : m_blocks){
-    double avg{ b->total_val / 
-        (b->voxel_dims[0] * b->voxel_dims[1] * b->voxel_dims[2]) };
-    b->avg_val = avg;
-  }
 
   Info() << m_blocks.size()-m_nonEmptyBlocks.size() << "/" << m_blocks.size() <<
       " blocks marked empty.";

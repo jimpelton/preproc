@@ -114,12 +114,15 @@ int
 main(int argc, const char *argv[])
 {
 
+  Info() << "Test: " << 5;
+
   CommandLineOptions clo;
   if (parseThem(argc, argv, clo) == 0) {
     Err() << "Command line parse error, exiting.";
     preproc::logger::shutdown();
     exit(1);
   }
+
 
   if (clo.actionType == ActionType::Generate) {
     if (!clo.datFilePath.empty()) {

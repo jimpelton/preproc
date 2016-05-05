@@ -29,20 +29,44 @@ public:
     logger &log;
 
   public:
+    
+    /////////////////////////////////////////////////////////////////////////////
     sentry(logger &l)
       : log(l)
     {
       log.lock();
+      std::cout << "sentry ctor after lock.\n";
       log.start_line();
     }
 
+    /////////////////////////////////////////////////////////////////////////////
+    sentry(const sentry& o)
+      : log{o.log}
+    {
+      std::cout << "sentry copy ctor.\n";
+    }
+
+
+    /////////////////////////////////////////////////////////////////////////////
+    sentry(sentry &&o)
+      : log{ o.log }
+    {
+      std::cout << "sentry move ctor.\n";
+    }
+
+
+    /////////////////////////////////////////////////////////////////////////////
     ~sentry()
     {
       log.end_line();
       log.unlock();
+      std::cout << "sentry dtor after unlock.\n";
     }
 
 
+    /////////////////////////////////////////////////////////////////////////////
+    /// \brief Log a message for parameter t.
+    /////////////////////////////////////////////////////////////////////////////
     template<typename T>
     sentry& operator<<(T t)
     {
@@ -51,6 +75,9 @@ public:
     }
 
 
+    /////////////////////////////////////////////////////////////////////////////
+    /// \brief Handle ostream manipulators.
+    /////////////////////////////////////////////////////////////////////////////
     sentry& operator<<(std::ostream & (*man)(std::ostream &))
     {
       // Handles manipulators like endl.
@@ -85,13 +112,18 @@ public:
     : m_out{ std::cout }
     , m_level{ LogLevel::INFO }
     , m_levelString{ "INFO" }
-    //, m_guard{ m_mutex, std::defer_lock }
   {
     switch(m_level) {
-    case LogLevel::DEBUG: m_levelString = "DEBUG"; break;
-    case LogLevel::ERROR: m_levelString = "ERROR"; break;
+    case LogLevel::DEBUG: 
+        m_levelString = "DEBUG"; 
+        break;
+    case LogLevel::ERROR: 
+        m_levelString = "ERROR"; 
+        break;
     case LogLevel::INFO:
-    default: m_levelString  = "INFO"; break;
+    default: 
+        m_levelString  = "INFO"; 
+        break;
     }
   }
 
@@ -102,10 +134,9 @@ public:
   {
     m_out << "\n";
     m_out.flush();
-
     s_instance = nullptr;
-
   }
+
 
   /////////////////////////////////////////////////////////////////////////////
   static logger& get(LogLevel level = LogLevel::INFO)
@@ -142,7 +173,7 @@ public:
   /////////////////////////////////////////////////////////////////////////////
   void end_line()
   {
-    m_out << std::endl;
+    m_out << '\n'; //std::endl;
   }
 
 
@@ -158,7 +189,9 @@ public:
   template<typename T>
   sentry operator<<(T t)
   {
-    return sentry(*this) << t;
+    sentry s(*this);
+    s << t;
+    return s;
   }
 
   void lock()

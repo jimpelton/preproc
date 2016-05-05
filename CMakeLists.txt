@@ -29,7 +29,6 @@ if (UNIX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall \
     -Wno-missing-braces \
    -fdiagnostics-color=auto \
-   -flto \
     -pthread" )
 
 #    -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP \
