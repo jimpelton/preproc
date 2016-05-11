@@ -3,16 +3,23 @@
 
 #include <string>
 
-enum class ActionType {
+namespace preproc
+{
+
+enum class ActionType
+{
   Convert,  ///< Convert binary to ascii
   Generate  ///< Generate a new binary or ascii index file
 };
 
-enum class OutputType {
-  Ascii, Binary
+enum class OutputType
+{
+  Ascii,
+  Binary
 };
 
-struct CommandLineOptions {
+struct CommandLineOptions
+{
   // raw file path
   std::string inFile;
   // output file path
@@ -43,8 +50,9 @@ struct CommandLineOptions {
   float tmin;
 };
 
-size_t
-convertToBytes(std::string s);
+
+size_t convertToBytes(std::string s);
+
 
 ///////////////////////////////////////////////////////////////////////////////
 /// \brief Parses command line args and populates \c opts.
@@ -55,13 +63,14 @@ convertToBytes(std::string s);
 ///
 /// \returns 0 on parse failure, non-zero if the parse was successful.
 ///////////////////////////////////////////////////////////////////////////////
-int 
-parseThem(int argc, const char *argv[], CommandLineOptions &opts);
+int parseThem(int argc, const char * argv[], CommandLineOptions& opts);
 
-void 
-printThem(const CommandLineOptions &);
 
-std::ostream& 
-operator<<(std::ostream&, const CommandLineOptions &);
+void printThem(const CommandLineOptions&);
+
+
+std::ostream& operator<<(std::ostream&, const CommandLineOptions&);
+
+} // namespace preproc
 
 #endif // preproc_cmdline_h__

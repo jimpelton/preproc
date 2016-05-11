@@ -5,20 +5,23 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "cmdline.h"
-#include "util.h"
 
-#include "indexfile.h"
-#include "blockcollection2.h"
-#include "logger.h"
-#include "parsedat.h"
+#include <bd/util/util.h>
+#include <bd/io/indexfile.h>
+#include <bd/volume/blockcollection2.h>
+#include <bd/log/logger.h>
+#include <bd/io/parsedat.h>
 
 #include <sstream>
 #include <string>
 #include <iostream>
 #include <stdexcept>
 
-using preproc::Err;
-using preproc::Info;
+using bd::Err;
+using bd::Info;
+
+namespace preproc {
+
 
 std::string
 makeFileNameString(const CommandLineOptions &clo, const char *extension)
@@ -41,11 +44,11 @@ generateIndexFile(const CommandLineOptions &clo)
   minmax[1] = clo.tmax;
 
   try {
-    preproc::IndexFile * indexFile{ 
-        preproc::IndexFile::fromRawFile(
+    bd::IndexFile * indexFile{
+        bd::IndexFile::fromRawFile(
             clo.inFile,
             clo.bufferSize,
-            preproc::to_dataType(clo.dataType),
+            bd::to_dataType(clo.dataType),
             clo.vol_dims,
             clo.num_blks,
             minmax) };
@@ -69,7 +72,7 @@ generateIndexFile(const CommandLineOptions &clo)
     if (clo.printBlocks) {
       std::stringstream ss;
       ss << "{\n";
-      for (preproc::FileBlock *block : indexFile->blocks()) {
+      for (bd::FileBlock *block : indexFile->blocks()) {
         std::cout << *block << std::endl;
       }
       ss << "}\n";
@@ -85,8 +88,8 @@ void
 readIndexFile(const CommandLineOptions & clo)
 {
 
-  preproc::IndexFile * index{
-      preproc::IndexFile::fromBinaryIndexFile(clo.inFile)
+  bd::IndexFile * index{
+      bd::IndexFile::fromBinaryIndexFile(clo.inFile)
   };
 
   auto startName = clo.inFile.rfind('/')+1;
@@ -108,6 +111,7 @@ execute(const CommandLineOptions &clo)
   }
 }
 
+} // namespace preproc
 
 ///////////////////////////////////////////////////////////////////////////////
 int
@@ -115,42 +119,42 @@ main(int argc, const char *argv[])
 {
 
   Info() << "Test: " << 5;
-
+  using preproc::CommandLineOptions;
   CommandLineOptions clo;
   if (parseThem(argc, argv, clo) == 0) {
     Err() << "Command line parse error, exiting.";
-    preproc::logger::shutdown();
-    exit(1);
+    bd::logger::shutdown();
+    return 1;
   }
 
 
-  if (clo.actionType == ActionType::Generate) {
+  if (clo.actionType == preproc::ActionType::Generate) {
     if (!clo.datFilePath.empty()) {
-      preproc::DatFileData datfile;
-      preproc::parseDat(clo.datFilePath, datfile);
+      bd::DatFileData datfile;
+      bd::parseDat(clo.datFilePath, datfile);
       clo.vol_dims[0] = datfile.rX;
       clo.vol_dims[1] = datfile.rY;
       clo.vol_dims[2] = datfile.rZ;
-      clo.dataType = preproc::to_string(datfile.dataType);
+      clo.dataType = bd::to_string(datfile.dataType);
       std::cout << ".dat file: \n" << datfile << "\n.";
     }
   }
 
   std::cout << clo << std::endl; // print cmd line options
 
-  preproc::DataType type{ preproc::to_dataType(clo.dataType) };
+  bd::DataType type{ bd::to_dataType(clo.dataType) };
   switch (type) {
 
-  case preproc::DataType::UnsignedCharacter:
-    execute<unsigned char>(clo);
+  case bd::DataType::UnsignedCharacter:
+    preproc::execute<unsigned char>(clo);
     break;
 
-  case preproc::DataType::UnsignedShort:
-    execute<unsigned short>(clo);
+  case bd::DataType::UnsignedShort:
+    preproc::execute<unsigned short>(clo);
     break;
 
-  case preproc::DataType::Float:
-    execute<float>(clo);
+  case bd::DataType::Float:
+    preproc::execute<float>(clo);
     break;
 
   default:
@@ -159,7 +163,7 @@ main(int argc, const char *argv[])
     break;
   }
 
-  preproc::logger::shutdown();
+  bd::logger::shutdown();
 
   return 0;
 }

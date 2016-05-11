@@ -11,6 +11,22 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake
     ${CMAKE_MODULE_PATH}
 )
 
+
+if(NOT DEFINED CRUFT_INCLUDE_DIR)
+    set(CRUFT_INCLUDE_DIR)
+endif()
+set(CRUFT_INCLUDE_DIR ${${CRUFT_INCLUDE_DIR}} CACHE PATH "Cruft includes directory path")
+
+if(NOT DEFINED CRUFT_DEBUG_LIBRARIES)
+    set(CRUFT_DEBUG_LIBRARIES)
+endif()
+set(CRUFT_DEBUG_LIBRARIES ${${CRUFT_DEBUG_LIBRARIES}} CACHE FILEPATH "Cruft library file (crufterly.a).")
+
+if(NOT DEFINED CRUFT_RELEASE_LIBRARIES)
+    set(CRUFT_RELEASE_LIBRARIES)
+endif()
+set(CRUFT_RELEASE_LIBRARIES ${${CRUFT_RELEASE_LIBRARIES}} CACHE FILEPATH "Cruft library file (crufterly.a).")
+
 # find_package(OpenGL REQUIRED)
 # find_package(GLFW REQUIRED)
 # find_package(GLEW REQUIRED)
@@ -45,6 +61,7 @@ find_package(GLM REQUIRED)
 include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/tclap/include"
     "${GLM_INCLUDE_DIRS}"
+    "${CRUFT_INCLUDE_DIR}"
 #    "${CUDA_INCLUDE_DIRS}"
 )
 
@@ -58,7 +75,10 @@ add_executable(
 )
 
 link_directories("/usr/lib64/")
-target_link_libraries(preproc "tbb")
+target_link_libraries(preproc
+        debug ${CRUFT_DEBUG_LIBRARIES}
+        optimized ${CRUFT_RELEASE_LIBRARIES}
+        "tbb")
 
 ###########################################################################
 # Compiler options for Clang
