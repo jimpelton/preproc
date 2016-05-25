@@ -20,12 +20,12 @@ set(CRUFT_INCLUDE_DIR ${${CRUFT_INCLUDE_DIR}} CACHE PATH "Cruft includes directo
 if(NOT DEFINED CRUFT_DEBUG_LIBRARIES)
     set(CRUFT_DEBUG_LIBRARIES)
 endif()
-set(CRUFT_DEBUG_LIBRARIES ${${CRUFT_DEBUG_LIBRARIES}} CACHE FILEPATH "Cruft library file (crufterly.a).")
+set(CRUFT_DEBUG_LIBRARIES ${${CRUFT_DEBUG_LIBRARIES}} CACHE FILEPATH "Cruft library file (.a,.dylib,.lib).")
 
 if(NOT DEFINED CRUFT_RELEASE_LIBRARIES)
     set(CRUFT_RELEASE_LIBRARIES)
 endif()
-set(CRUFT_RELEASE_LIBRARIES ${${CRUFT_RELEASE_LIBRARIES}} CACHE FILEPATH "Cruft library file (crufterly.a).")
+set(CRUFT_RELEASE_LIBRARIES ${${CRUFT_RELEASE_LIBRARIES}} CACHE FILEPATH "Cruft library file (.a,.dylib,.lib).")
 
 # find_package(OpenGL REQUIRED)
 # find_package(GLFW REQUIRED)
@@ -62,7 +62,6 @@ include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/tclap/include"
     "${GLM_INCLUDE_DIRS}"
     "${CRUFT_INCLUDE_DIR}"
-#    "${CUDA_INCLUDE_DIRS}"
 )
 
 

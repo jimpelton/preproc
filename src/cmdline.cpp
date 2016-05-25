@@ -26,13 +26,13 @@ try
   cmd.add(fileArg);
 
   //output file
-  TCLAP::ValueArg< std::string > outFilePathArg
-      ("o", "outfile-path", "Path to output file (default is '.')", false, ".", "string");
+  TCLAP::ValueArg< std::string >
+      outFilePathArg("o", "outfile-path", "Directory to write output file into (default is '.')", false, ".", "string");
   cmd.add(outFilePathArg);
 
   //output file prefix
-  TCLAP::ValueArg< std::string > outFilePrefixArg
-      ("", "outfile-prefix", "Output file name prefix.", false, "", "string");
+  TCLAP::ValueArg< std::string >
+      outFilePrefixArg("", "outfile-prefix", "Output file name prefix.", false, "", "string");
   cmd.add(outFilePrefixArg);
 
   // ouput file type

@@ -96,7 +96,6 @@ readIndexFile(const CommandLineOptions & clo)
   auto endName = startName + (clo.inFile.size() - clo.inFile.rfind('.'));
   std::string name(clo.inFile, startName, endName);
   name += ".json";
-
   index->writeAsciiIndexFile(clo.outFilePath + '/' + name);
 }
 

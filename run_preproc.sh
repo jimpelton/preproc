@@ -43,17 +43,17 @@
 
 
 
-build/preproc \
---in-file "/home/jim/t/volumes/INL/Josh_Kane/hop_flower/9-13-13 CT Volume Hop Flower-512.raw" \
---dat-file "/home/jim/t/volumes/INL/Josh_Kane/hop_flower/9-13-13 CT Volume Hop Flower-512.dat" \
+build_clion/Debug/preproc \
+--in-file "/Volumes/TerrorByte/volumes/INL/Josh_Kane/hop_flower/9-13-13 CT Volume Hop Flower-512.raw" \
+--dat-file "/Volumes/TerrorByte/volumes/INL/Josh_Kane/hop_flower/9-13-13 CT Volume Hop Flower-512.dat" \
 --outfile-prefix hop_flower-512 \
---output-format binary \
+--output-format ascii \
 --generate \
---tmax 30.0 \
+--tmax 33.0 \
 --tmin 6.0 \
---nbx 2 \
---nby 2 \
---nbz 2 \
+--nbx 16 \
+--nby 16 \
+--nbz 16 \
 --buffer-size 64M
 
 #build/preproc \
