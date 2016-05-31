@@ -97,7 +97,7 @@ try
 
   // threshold min/max
   TCLAP::ValueArg< float > tmin("", "tmin", "Thresh min", false,
-      std::numeric_limits< float >::min(), "float");
+      std::numeric_limits< float >::lowest(), "float");
   cmd.add(tmin);
 
   TCLAP::ValueArg< float > tmax("", "tmax", "Thresh max", false,
@@ -197,7 +197,7 @@ operator<<(std::ostream& os, const CommandLineOptions& opts)
       " X " << opts.num_blks[2] << "\n"
       "Buffer Size: " << opts.bufferSize << " bytes.\n"
       "Threshold (min-max): " << opts.tmin << " - " << opts.tmax << "\n"
-      "Print blocks: " << (opts.printBlocks ? "True" : "False");
+      "Print blocks: " << std::boolalpha << opts.printBlocks; //(opts.printBlocks ? "True" : "False");
 
   return os;
 }
