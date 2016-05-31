@@ -117,7 +117,6 @@ int
 main(int argc, const char *argv[])
 {
 
-  Info() << "Test: " << 5;
   using preproc::CommandLineOptions;
   CommandLineOptions clo;
   if (parseThem(argc, argv, clo) == 0) {
