@@ -34,6 +34,35 @@ makeFileNameString(const CommandLineOptions &clo, const char *extension)
   return outFileName.str();
 }
 
+void
+printBlocksToStdOut(bd::IndexFile const *indexFile) {
+  std::cout << "{\n";
+  for (bd::FileBlock *block : indexFile->blocks()) {
+    std::cout << *block << std::endl;
+  }
+  std::cout << "}\n";
+}
+
+void
+writeBlocksToFile(bd::IndexFile const *indexFile, CommandLineOptions const &clo, OutputType type) {
+
+  switch (type) {
+
+    case OutputType::Ascii: {
+      std::string outFileName{ makeFileNameString(clo, ".json") };
+      indexFile->writeAsciiIndexFile(outFileName);
+      break;
+    }
+
+    case OutputType::Binary: {
+      std::string outFileName{ makeFileNameString(clo, ".bin") };
+      indexFile->writeBinaryIndexFile(outFileName);
+      break;
+    }
+
+  } //switch
+}
+
 template<typename Ty>
 void
 generateIndexFile(const CommandLineOptions &clo)
@@ -53,60 +82,78 @@ generateIndexFile(const CommandLineOptions &clo)
             clo.num_blks,
             minmax) };
 
-    switch (clo.outputFileType) {
-
-    case OutputType::Ascii: {
-      std::string outFileName{ makeFileNameString(clo, ".json") };
-      indexFile->writeAsciiIndexFile(outFileName);
-      break;
-    }
-
-    case OutputType::Binary: {
-      std::string outFileName{ makeFileNameString(clo, ".bin") };
-      indexFile->writeBinaryIndexFile(outFileName);
-      break;
-    }
-
-    } //switch
 
     if (clo.printBlocks) {
-      std::stringstream ss;
-      ss << "{\n";
-      for (bd::FileBlock *block : indexFile->blocks()) {
-        std::cout << *block << std::endl;
-      }
-      ss << "}\n";
+      printBlocksToStdOut(indexFile);
     }
+
   } catch (std::runtime_error e) {
     //std::cerr << e.what() << std::endl;
     Err() << e.what();
   }
 }
 
-template<typename Ty>
+/// \brief Open a binary index file and print it to stdout or write it to json file.
 void
-readIndexFile(const CommandLineOptions & clo)
+convert(CommandLineOptions & clo)
 {
 
   bd::IndexFile * index{
       bd::IndexFile::fromBinaryIndexFile(clo.inFile)
   };
 
-  auto startName = clo.inFile.rfind('/')+1;
-  auto endName = startName + (clo.inFile.size() - clo.inFile.rfind('.'));
-  std::string name(clo.inFile, startName, endName);
-  name += ".json";
-  index->writeAsciiIndexFile(clo.outFilePath + '/' + name);
+  if (clo.printBlocks){
+
+    // Print blocks in json format to standard out.
+    index->writeAsciiIndexFile(std::cout);
+
+  } else {
+
+    // Otherwise, just write the blocks to a json text file.
+    // We can't use makeFileNameString() because we want to use the binary file's name.
+
+    auto startName = clo.inFile.rfind('/') + 1;
+    auto endName = startName + (clo.inFile.size() - clo.inFile.rfind('.'));
+    std::string name(clo.inFile, startName, endName);
+    name += ".json";
+    index->writeAsciiIndexFile(clo.outFilePath + '/' + name);
+
+  }
 }
 
-template<typename Ty>
 void
-execute(const CommandLineOptions &clo)
+generate(CommandLineOptions &clo)
 {
-  if (clo.actionType == ActionType::Generate) {
-    generateIndexFile<Ty>(clo);
-  } else {
-    readIndexFile<Ty>(clo);
+  // if a dat file was provided, populate our CommandLineOptions with the
+  // options from that dat file.
+  if (!clo.datFilePath.empty()) {
+    bd::DatFileData datfile;
+    bd::parseDat(clo.datFilePath, datfile);
+    clo.vol_dims[0] = datfile.rX;
+    clo.vol_dims[1] = datfile.rY;
+    clo.vol_dims[2] = datfile.rZ;
+    clo.dataType = bd::to_string(datfile.dataType);
+    std::cout << "\n---Begin Dat File---\n" << datfile << "\n---End Dat File---\n";
+  }
+
+  // Decide what data type we have and call execute to kick off the processing.
+  bd::DataType type{ bd::to_dataType(clo.dataType) };
+  switch (type) {
+
+    case bd::DataType::UnsignedCharacter:
+      preproc::generateIndexFile<unsigned char>(clo);
+      break;
+
+    case bd::DataType::UnsignedShort:
+      preproc::generateIndexFile<unsigned short>(clo);
+      break;
+
+    case bd::DataType::Float:
+      preproc::generateIndexFile<float>(clo);
+      break;
+    default:
+      bd::Err() << "Unsupported/unknown datatype: " << clo.dataType << ".\n Exiting...";
+      break;
   }
 }
 
@@ -125,40 +172,19 @@ main(int argc, const char *argv[])
     return 1;
   }
 
-
-  if (clo.actionType == preproc::ActionType::Generate) {
-    if (!clo.datFilePath.empty()) {
-      bd::DatFileData datfile;
-      bd::parseDat(clo.datFilePath, datfile);
-      clo.vol_dims[0] = datfile.rX;
-      clo.vol_dims[1] = datfile.rY;
-      clo.vol_dims[2] = datfile.rZ;
-      clo.dataType = bd::to_string(datfile.dataType);
-      std::cout << ".dat file: \n" << datfile << "\n.";
-    }
-  }
-
   std::cout << clo << std::endl; // print cmd line options
 
-  bd::DataType type{ bd::to_dataType(clo.dataType) };
-  switch (type) {
-
-  case bd::DataType::UnsignedCharacter:
-    preproc::execute<unsigned char>(clo);
-    break;
-
-  case bd::DataType::UnsignedShort:
-    preproc::execute<unsigned short>(clo);
-    break;
-
-  case bd::DataType::Float:
-    preproc::execute<float>(clo);
-    break;
-
-  default:
-    std::cerr << "Unsupported/unknown datatype: " << clo.dataType << ".\n Exiting...";
-    return 1;
-    break;
+  switch(clo.actionType) {
+    case preproc::ActionType::Generate:
+      preproc::generate(clo);
+      break;
+    case preproc::ActionType::Convert:
+      preproc::convert(clo);
+      break;
+    default:
+      Err() << "Provide an action. Use -h for help.";
+      bd::logger::shutdown();
+      return 1;
   }
 
   bd::logger::shutdown();
