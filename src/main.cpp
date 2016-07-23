@@ -44,9 +44,9 @@ printBlocksToStdOut(bd::IndexFile const *indexFile) {
 }
 
 void
-writeBlocksToFile(bd::IndexFile const *indexFile, CommandLineOptions const &clo, OutputType type) {
+writeBlocksToFile(bd::IndexFile const *indexFile, CommandLineOptions const &clo) {
 
-  switch (type) {
+  switch (clo.outputFileType) {
 
     case OutputType::Ascii: {
       std::string outFileName{ makeFileNameString(clo, ".json") };
@@ -82,6 +82,7 @@ generateIndexFile(const CommandLineOptions &clo)
             clo.num_blks,
             minmax) };
 
+    writeBlocksToFile(indexFile, clo);
 
     if (clo.printBlocks) {
       printBlocksToStdOut(indexFile);
