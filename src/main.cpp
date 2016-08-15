@@ -133,6 +133,7 @@ generate(CommandLineOptions &clo)
     clo.vol_dims[1] = datfile.rY;
     clo.vol_dims[2] = datfile.rZ;
     clo.dataType = bd::to_string(datfile.dataType);
+    bd::Info() << clo << std::endl; // print cmd line options
     std::cout << "\n---Begin Dat File---\n" << datfile << "\n---End Dat File---\n";
   }
 
@@ -172,7 +173,6 @@ main(int argc, const char *argv[])
     return 1;
   }
 
-  bd::Info() << clo << std::endl; // print cmd line options
 
   switch(clo.actionType) {
     case preproc::ActionType::Generate:

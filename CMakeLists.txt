@@ -27,28 +27,17 @@ if(NOT DEFINED CRUFT_RELEASE_LIBRARIES)
 endif()
 set(CRUFT_RELEASE_LIBRARIES ${${CRUFT_RELEASE_LIBRARIES}} CACHE FILEPATH "Cruft library file (.a,.dylib,.lib).")
 
-# find_package(OpenGL REQUIRED)
-# find_package(GLFW REQUIRED)
-# find_package(GLEW REQUIRED)
 
 # Windows requires a few extra definitions.
 if (WIN32)
-#     add_definitions(-DGLEW_STATIC)  #Link statically to Glew
     add_definitions(-DNOMINMAX)     #Disable the overrides of std::min/max in Windows.h
 endif (WIN32)
 
 if (UNIX)
-#    set(CMAKE_C_COMPILER "/usr/local/bin/clang-omp")
-#    set(CMAKE_CXX_COMPILER "/usr/local/bin/clang-omp++")
-#    set(CMAKE_AR "/usr/local/bin/ar")
-#    set(CMAKE_RANLIB "/usr/local/bin/ranlib")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall \
     -Wno-missing-braces \
    -fdiagnostics-color=auto \
     -pthread" )
-
-#    -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP \
-#    -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP"
 endif (UNIX)
 
 
@@ -56,12 +45,10 @@ endif (UNIX)
 #### T h i r d   P a r t y  ################################################
 find_package(GLM REQUIRED)
 
-#find_package(CUDA QUIET REQUIRED)
-
 include_directories(
-    "${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/tclap/include"
-    "${GLM_INCLUDE_DIRS}"
-    "${CRUFT_INCLUDE_DIR}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/tclap/include"
+        "${GLM_INCLUDE_DIRS}"
+        "${CRUFT_INCLUDE_DIR}"
 )
 
 
@@ -77,7 +64,8 @@ link_directories("/usr/lib64/")
 target_link_libraries(preproc
         debug ${CRUFT_DEBUG_LIBRARIES}
         optimized ${CRUFT_RELEASE_LIBRARIES}
-        "tbb")
+        "tbb"
+        )
 
 ###########################################################################
 # Compiler options for Clang
@@ -87,13 +75,13 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
             "-Wall -Wno-missing-braces")
 endif()
 
-# install(TARGETS crufterly ARCHIVE
-#         DESTINATION "lib/crufterly/static/${CMAKE_BUILD_TYPE}/")
+install(TARGETS preproc RUNTIME
+        DESTINATION "bin/")
 
 # install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/bd/"
 #         DESTINATION "include/crufterly/bd" FILES_MATCHING PATTERN "*.h")
 
-# add_custom_target(install_${PROJECT_NAME}
-#                   make install
-#                   DEPENDS ${PROJECT_NAME}
-#                   COMMENT "Installing ${PROJECT_NAME}")
+add_custom_target(install_${PROJECT_NAME}
+        make install
+        DEPENDS ${PROJECT_NAME}
+        COMMENT "Installing ${PROJECT_NAME}")
