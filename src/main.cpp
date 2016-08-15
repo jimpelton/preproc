@@ -8,9 +8,9 @@
 
 #include <bd/util/util.h>
 #include <bd/io/indexfile.h>
-#include <bd/volume/blockcollection2.h>
+#include <bd/volume/fileblockcollection.h>
 #include <bd/log/logger.h>
-#include <bd/io/parsedat.h>
+#include <bd/io/datfile.h>
 
 #include <sstream>
 #include <string>
@@ -35,28 +35,28 @@ makeFileNameString(const CommandLineOptions &clo, const char *extension)
 }
 
 void
-printBlocksToStdOut(bd::IndexFile const *indexFile) {
+printBlocksToStdOut(bd::IndexFile const &indexFile) {
   std::cout << "{\n";
-  for (bd::FileBlock *block : indexFile->blocks()) {
+  for (bd::FileBlock *block : indexFile.blocks()) {
     std::cout << *block << std::endl;
   }
   std::cout << "}\n";
 }
 
 void
-writeBlocksToFile(bd::IndexFile const *indexFile, CommandLineOptions const &clo) {
+writeBlocksToFile(bd::IndexFile const &indexFile, CommandLineOptions const &clo) {
 
   switch (clo.outputFileType) {
 
     case OutputType::Ascii: {
       std::string outFileName{ makeFileNameString(clo, ".json") };
-      indexFile->writeAsciiIndexFile(outFileName);
+      indexFile.writeAsciiIndexFile(outFileName);
       break;
     }
 
     case OutputType::Binary: {
       std::string outFileName{ makeFileNameString(clo, ".bin") };
-      indexFile->writeBinaryIndexFile(outFileName);
+      indexFile.writeBinaryIndexFile(outFileName);
       break;
     }
 
@@ -73,19 +73,18 @@ generateIndexFile(const CommandLineOptions &clo)
   minmax[1] = clo.tmax;
 
   try {
-    bd::IndexFile * indexFile{
-        bd::IndexFile::fromRawFile(
-            clo.inFile,
-            clo.bufferSize,
-            bd::to_dataType(clo.dataType),
-            clo.vol_dims,
-            clo.num_blks,
-            minmax) };
+    std::unique_ptr<bd::IndexFile> indexFile{
+      bd::IndexFile::fromRawFile(clo.inFile,
+                                 clo.bufferSize,
+                                 bd::to_dataType(clo.dataType),
+                                 clo.vol_dims,
+                                 clo.num_blks,
+                                 minmax) };
 
-    writeBlocksToFile(indexFile, clo);
+    writeBlocksToFile(*(indexFile.get()), clo);
 
     if (clo.printBlocks) {
-      printBlocksToStdOut(indexFile);
+      printBlocksToStdOut(*(indexFile.get()));
     }
 
   } catch (std::runtime_error e) {
@@ -99,7 +98,7 @@ void
 convert(CommandLineOptions & clo)
 {
 
-  bd::IndexFile * index{
+  std::unique_ptr<bd::IndexFile> index{
       bd::IndexFile::fromBinaryIndexFile(clo.inFile)
   };
 
@@ -173,7 +172,7 @@ main(int argc, const char *argv[])
     return 1;
   }
 
-  std::cout << clo << std::endl; // print cmd line options
+  bd::Info() << clo << std::endl; // print cmd line options
 
   switch(clo.actionType) {
     case preproc::ActionType::Generate:
