@@ -53,3 +53,4 @@ include_directories(
 
 
 add_subdirectory(preproc)
+add_subdirectory(rawhist)
