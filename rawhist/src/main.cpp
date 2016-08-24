@@ -31,31 +31,36 @@ namespace
 template<typename Ty>
 void volumeMinMax(std::string const &path, size_t szbuf, Ty* volMin, Ty* volMax)
 {
-  bd::BufferedReader<Ty> r(szbuf);
-  if (! r.open(path)) {
+  bd::BufferedReader<Ty> r{ szbuf };
+  if (!r.open(path)) {
     bd::Err() << "File " << path << " was not opened.";
     return;
   }
-  bd::Dbg() << "Opened file: " << path;
+
+//  bd::Dbg() << "Opened file: " << path;
+
   r.start();
   Ty max{ 0 };
   Ty min{ 0 };
   bd::Info() << "Begin min/max computation.";
   while (r.hasNext()) {
-    // compute min/max of this buffer
-    // combine min/max for this buffer and previous
     bd::Dbg() << "Waiting for full buffer";
     bd::Buffer<Ty> *buf = r.waitNext();
     bd::Dbg() << "Got a full buffer: " << buf->elements();
+
     tbb::blocked_range<size_t> range(0, buf->elements());
     bd::ParallelMinMax<Ty> mm(buf);
     tbb::parallel_reduce(range, mm);
+
     if (max < mm.max_value)
       max = mm.max_value;
     if (min > mm.min_value)
       min = mm.min_value;
+
+    r.waitReturn(buf);
   }
 
+  bd::Info() << "Finished min/max computation.";
   *volMin = min;
   *volMax = max;
 }
@@ -75,16 +80,23 @@ void hist(std::string const &fileName, size_t szbuf, Ty rawmin, Ty rawmax)
   bd::Info() << "Begin volume histogram computation.";
 
   while (r.hasNext()) {
-    bd::Buffer<Ty> *buf{ r.waitNext() };
+    bd::Dbg() << "Waiting for full buffer";
+    bd::Buffer<Ty> *buf = r.waitNext();
+    bd::Dbg() << "Got a full buffer: " << buf->elements();
+
     tbb::blocked_range<size_t> range(0, buf->elements());
     bd::ParallelHistogram<Ty> histo(buf, rawmin, rawmax);
+    tbb::parallel_reduce(range, histo);
+
     // Accumulate this buffer's histo
     for(size_t i{ 0 }; i < 1536; ++i) {
       histcount[i] += histo.get(i);
     }
+
+    r.waitReturn(buf);
   }
 
-
+  bd::Info() << "Finished volume histogram computation.";
 }
 
 
