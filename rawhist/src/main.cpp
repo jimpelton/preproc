@@ -29,7 +29,7 @@ namespace
 
 
 template<typename Ty>
-void volumeMinMax(std::string const &path, size_t szbuf, Ty* volMin, Ty* volMax)
+void volumeMinMax(std::string const &path, size_t szbuf, float* volMin, float* volMax)
 {
   bd::BufferedReader<Ty> r{ szbuf };
   if (!r.open(path)) {
@@ -67,7 +67,7 @@ void volumeMinMax(std::string const &path, size_t szbuf, Ty* volMin, Ty* volMax)
 
 
 template<typename Ty>
-void hist(std::string const &fileName, size_t szbuf, Ty rawmin, Ty rawmax)
+void hist(std::string const &fileName, size_t szbuf, float rawmin, float rawmax)
 {
   bd::BufferedReader<Ty> r(szbuf);
   if (! r.open(fileName)) {
@@ -90,7 +90,13 @@ void hist(std::string const &fileName, size_t szbuf, Ty rawmin, Ty rawmax)
 
     // Accumulate this buffer's histo
     for(size_t i{ 0 }; i < 1536; ++i) {
-      histcount[i] += histo.get(i);
+      histcount[i] += histo.buckets()[i];
+
+      if (histo.histMin()[i] < histmin[i])
+        histmin[i] = histo.histMin()[i];
+
+      if (histo.histMax()[i] > histmax[i])
+        histmax[i] = histo.histMax()[i];
     }
 
     r.waitReturn(buf);
@@ -106,24 +112,24 @@ generate(CommandLineOptions &clo)
   // Decide what data type we have and call execute to kick off the processing.
   bd::DataType type{ bd::to_dataType(clo.dataType) };
   std::ifstream s;
+  float rawmin{ 0 };
+  float rawmax{ 0 };
+
   switch (type) {
 
     case bd::DataType::UnsignedCharacter: {
-      unsigned char rawmin, rawmax;
       volumeMinMax<unsigned char>(clo.rawFilePath, clo.bufferSize, &rawmin, &rawmax);
       hist<unsigned char>(clo.rawFilePath, clo.bufferSize, rawmin, rawmax);
     }
       break;
 
     case bd::DataType::UnsignedShort: {
-      unsigned short rawmin, rawmax;
       volumeMinMax<unsigned short>(clo.rawFilePath, clo.bufferSize, &rawmin, &rawmax);
       hist<unsigned short>(clo.rawFilePath, clo.bufferSize, rawmin, rawmax);
     }
       break;
 
     case bd::DataType::Float: {
-      float rawmin, rawmax;
       volumeMinMax<float>(clo.rawFilePath, clo.bufferSize, &rawmin, &rawmax);
       hist<float>(clo.rawFilePath, clo.bufferSize, rawmin, rawmax);
     }
@@ -135,6 +141,24 @@ generate(CommandLineOptions &clo)
   }
 
   //print histo to stdout.
+//  fprintf(stdout,"MinMax %.12lf %.12lf %d\n",rawmin,rawmax,logmode+2*loglogmode);
+//  fprintf(stdout,"#Index Perc Offset Min Max\n");
+//  double pindex = 0;
+//  for (int i = 0; i < 1536; i++)
+//  {
+////    double pcount = (double)histcount[i]/totalcount;
+//    if (histcount[i] != 0)
+//    {
+//      fprintf(stdout,"%d\t%lf\t%lf\t%lf\t%lf\n",i, pcount,pindex,
+//              histmin[i],histmax[i]);
+//    }
+//    else
+//    {
+//      fprintf(stdout,"%d\t%d\t%lf\t%lf\t%lf\n",i, 0,pindex,
+//              0.0,0.0);
+//    }
+////    pindex += pcount;
+//  }
 }
 
 } // namespace rawhist

@@ -34,8 +34,9 @@ target_link_libraries(rawhist
         debug ${CRUFT_DEBUG_LIBRARIES}
         optimized ${CRUFT_RELEASE_LIBRARIES}
 #        ${NVTOOLSEXT_LIB}
-#        /usr/lib/libtbb.so
-            /usr/local/lib/libtbb.dylib
+        debug ${TBB_DEBUG_LIBRARIES}
+        optimized ${TBB_RELEASE_LIBRARIES}
+#            /usr/local/lib/libtbb.dylib
         )
 
 ################################################################################
