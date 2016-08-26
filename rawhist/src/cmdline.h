@@ -11,6 +11,8 @@ struct CommandLineOptions
   std::string rawFilePath;
   // for .dat descriptor file (currently unimplemented)
   std::string datFilePath;
+  // histogram file output path
+  std::string outputFilePath;
   // volume data type
   std::string dataType;
   // buffer size

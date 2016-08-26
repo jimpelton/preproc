@@ -25,6 +25,10 @@ try {
   TCLAP::ValueArg<std::string> datFilePath("d", "dat-file", "Path to .dat file.", false, "", "string");
   cmd.add(datFilePath);
 
+  // output file path
+  TCLAP::ValueArg<std::string> outputFilePath("o", "output-path", "Path to save hist file to.", false, "", "string");
+  cmd.add(outputFilePath);
+
   // volume data type
   std::vector<std::string> dataTypes{"float", "ushort", "uchar"};
   TCLAP::ValuesConstraint<std::string> dataTypeAllowValues(dataTypes);
@@ -43,6 +47,7 @@ try {
 
   opts.rawFilePath = fileArg.getValue();
   opts.datFilePath = datFilePath.getValue();
+  opts.outputFilePath = outputFilePath.getValue();
   opts.dataType = dataTypeArg.getValue();
   opts.bufferSize = convertToBytes(bufferSizeArg.getValue());
 

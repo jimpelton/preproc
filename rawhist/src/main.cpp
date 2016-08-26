@@ -15,6 +15,7 @@
 #include <iostream>
 #include <fstream>
 #include <unistd.h>
+#include <iomanip>
 
 namespace rawhist
 {
@@ -24,6 +25,9 @@ namespace
   int histcount[1536];
   double histmin[1536];
   double histmax[1536];
+  long long totalcount{ 0 };
+  float rawmin{ 0 };
+  float rawmax{ 0 };
 
 } // namespace
 
@@ -98,6 +102,7 @@ void hist(std::string const &fileName, size_t szbuf, float rawmin, float rawmax)
       if (histo.histMax()[i] > histmax[i])
         histmax[i] = histo.histMax()[i];
     }
+    totalcount += histo.totalCount();
 
     r.waitReturn(buf);
   }
@@ -105,34 +110,70 @@ void hist(std::string const &fileName, size_t szbuf, float rawmin, float rawmax)
   bd::Info() << "Finished volume histogram computation.";
 }
 
+template<typename Ty>
+void doit(CommandLineOptions const &clo)
+{
+  for (int i = 0; i < 1536; ++i) {
+    histmin[i] = std::numeric_limits<double>::max();
+    histmax[i] = std::numeric_limits<double>::lowest();
+    histcount[i] = 0;
+  }
+
+
+  volumeMinMax<Ty>(clo.rawFilePath, clo.bufferSize, &rawmin, &rawmax);
+  hist<Ty>(clo.rawFilePath, clo.bufferSize, rawmin, rawmax);
+
+}
+
+void printHisto(std::ostream &os)
+{
+//  fprintf(os,"MinMax %.12lf %.12lf \n",rawmin, rawmax);
+  os << std::fixed << std::setprecision(6);
+//  os << std::fixed << std::setprecision(12);
+  os << "MinMax " << std::setw(20) << rawmin << std::setw(20) << rawmax << '\n';
+//  fprintf(os,"#Index Perc Offset Min Max\n");
+  os << "#Index Perc Offset Min Max\n";
+  double pindex = 0;
+  for (int i = 0; i < 1536; i++)
+  {
+    double pcount = (double)histcount[i]/totalcount;
+    if (histcount[i] != 0)
+    {
+//      fprintf(os,"%d\t%lf\t%lf\t%lf\t%lf\n",i, pcount,pindex, histmin[i],histmax[i]);
+      os << std::left << std::setw(5) << i  << std::left << std::setw(20) << pcount << std::left << std::setw(20) << pindex
+         << std::left << std::setw(20) << histmin[i] << std::left << std::setw(20) << histmax[i] << '\n';
+    }
+    else
+    {
+//      fprintf(os,"%d\t%d\t%lf\t%lf\t%lf\n",i, 0,pindex, 0.0,0.0);
+      os << std::left << std::setw(5) << i << std::left << std::setw(20) << 0.0 << std::left << std::setw(20) << pindex
+         << std::left << std::setw(20) << 0.0 << std::left << std::setw(20) << 0.0 << '\n';
+    }
+    pindex += pcount;
+  }
+
+}
 
 void
 generate(CommandLineOptions &clo)
 {
   // Decide what data type we have and call execute to kick off the processing.
   bd::DataType type{ bd::to_dataType(clo.dataType) };
-  std::ifstream s;
-  float rawmin{ 0 };
-  float rawmax{ 0 };
-
   switch (type) {
 
-    case bd::DataType::UnsignedCharacter: {
-      volumeMinMax<unsigned char>(clo.rawFilePath, clo.bufferSize, &rawmin, &rawmax);
-      hist<unsigned char>(clo.rawFilePath, clo.bufferSize, rawmin, rawmax);
-    }
+    case bd::DataType::UnsignedCharacter:
+      doit<unsigned char>(clo);
+
       break;
 
-    case bd::DataType::UnsignedShort: {
-      volumeMinMax<unsigned short>(clo.rawFilePath, clo.bufferSize, &rawmin, &rawmax);
-      hist<unsigned short>(clo.rawFilePath, clo.bufferSize, rawmin, rawmax);
-    }
+    case bd::DataType::UnsignedShort:
+      doit<unsigned short>(clo);
+
       break;
 
-    case bd::DataType::Float: {
-      volumeMinMax<float>(clo.rawFilePath, clo.bufferSize, &rawmin, &rawmax);
-      hist<float>(clo.rawFilePath, clo.bufferSize, rawmin, rawmax);
-    }
+    case bd::DataType::Float:
+      doit<float>(clo);
+
       break;
 
     default:
@@ -140,25 +181,23 @@ generate(CommandLineOptions &clo)
       break;
   }
 
+
+  if (! clo.outputFilePath.empty()) {
+
+    std::ofstream os(clo.outputFilePath);
+    if (!os.is_open()) {
+      bd::Err() << "Could not open output file: "
+                << clo.outputFilePath << ", using stdout instead.";
+      printHisto(std::cout);
+    } else {
+      printHisto(os);
+    }
+  } else {
+    printHisto(std::cout);
+  }
+
   //print histo to stdout.
-//  fprintf(stdout,"MinMax %.12lf %.12lf %d\n",rawmin,rawmax,logmode+2*loglogmode);
-//  fprintf(stdout,"#Index Perc Offset Min Max\n");
-//  double pindex = 0;
-//  for (int i = 0; i < 1536; i++)
-//  {
-////    double pcount = (double)histcount[i]/totalcount;
-//    if (histcount[i] != 0)
-//    {
-//      fprintf(stdout,"%d\t%lf\t%lf\t%lf\t%lf\n",i, pcount,pindex,
-//              histmin[i],histmax[i]);
-//    }
-//    else
-//    {
-//      fprintf(stdout,"%d\t%d\t%lf\t%lf\t%lf\n",i, 0,pindex,
-//              0.0,0.0);
-//    }
-////    pindex += pcount;
-//  }
+
 }
 
 } // namespace rawhist
@@ -178,6 +217,7 @@ int main(int argc, const char *argv[])
     bd::parseDat(clo.datFilePath, dat);
     clo.dataType = bd::to_string(dat.dataType);
   }
+
 
   rawhist::generate(clo);
 
