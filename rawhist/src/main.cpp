@@ -119,19 +119,14 @@ void doit(CommandLineOptions const &clo)
     histcount[i] = 0;
   }
 
-
   volumeMinMax<Ty>(clo.rawFilePath, clo.bufferSize, &rawmin, &rawmax);
   hist<Ty>(clo.rawFilePath, clo.bufferSize, rawmin, rawmax);
-
 }
 
 void printHisto(std::ostream &os)
 {
-//  fprintf(os,"MinMax %.12lf %.12lf \n",rawmin, rawmax);
   os << std::fixed << std::setprecision(6);
-//  os << std::fixed << std::setprecision(12);
   os << "MinMax " << std::setw(20) << rawmin << std::setw(20) << rawmax << '\n';
-//  fprintf(os,"#Index Perc Offset Min Max\n");
   os << "#Index Perc Offset Min Max\n";
   double pindex = 0;
   for (int i = 0; i < 1536; i++)
@@ -139,13 +134,11 @@ void printHisto(std::ostream &os)
     double pcount = (double)histcount[i]/totalcount;
     if (histcount[i] != 0)
     {
-//      fprintf(os,"%d\t%lf\t%lf\t%lf\t%lf\n",i, pcount,pindex, histmin[i],histmax[i]);
       os << std::left << std::setw(5) << i  << std::left << std::setw(20) << pcount << std::left << std::setw(20) << pindex
          << std::left << std::setw(20) << histmin[i] << std::left << std::setw(20) << histmax[i] << '\n';
     }
     else
     {
-//      fprintf(os,"%d\t%d\t%lf\t%lf\t%lf\n",i, 0,pindex, 0.0,0.0);
       os << std::left << std::setw(5) << i << std::left << std::setw(20) << 0.0 << std::left << std::setw(20) << pindex
          << std::left << std::setw(20) << 0.0 << std::left << std::setw(20) << 0.0 << '\n';
     }
@@ -207,7 +200,7 @@ int main(int argc, const char *argv[])
 {
   rawhist::CommandLineOptions clo;
   if (rawhist::parseThem(argc, argv, clo) == 0) {
-    std::cout << "No arguments provided.\nPlease use -h for usage info."
+    std::cerr << "No arguments provided.\nPlease use -h for usage info."
               << std::endl;
     return 1;
   }
