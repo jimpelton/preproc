@@ -41,4 +41,9 @@ target_link_libraries(rawhist
 
 ################################################################################
 # Install
-#install(TARGETS rawhist RUNTIME DESTINATION ${BIN_DIR})
+install(TARGETS rawhist RUNTIME DESTINATION "bin/")
+
+add_custom_target(install_${PROJECT_NAME}
+        make install
+        DEPENDS ${PROJECT_NAME}
+        COMMENT "Installing ${PROJECT_NAME}")
