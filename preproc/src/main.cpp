@@ -8,101 +8,127 @@
 
 #include <bd/util/util.h>
 #include <bd/io/indexfile.h>
-#include <bd/volume/fileblockcollection.h>
 #include <bd/log/logger.h>
 #include <bd/io/datfile.h>
+#include <bd/volume/voxelopacityfilter.h>
+#include <bd/volume/transferfunction.h>
+
+#include <tbb/tbb.h>
 
 #include <sstream>
 #include <string>
 #include <iostream>
 #include <stdexcept>
+#include <vector>
 
 using bd::Err;
 using bd::Info;
 
-namespace preproc {
+namespace preproc
+{
 
+using RelMapType = std::vector<bool>;
+using TrFuncType = std::vector<bd::OpacityKnot>;
 
 std::string
 makeFileNameString(const CommandLineOptions &clo, const char *extension)
 {
   std::stringstream outFileName;
-  outFileName << clo.outFilePath << '/' << clo.outFilePrefix << '_' <<
-      clo.num_blks[0] << '-' << clo.num_blks[1] << '-' << clo.num_blks[2] << '_' <<
-      clo.tmin << '-' << clo.tmax << extension;
+  outFileName << clo.outFilePath << '/' << clo.outFilePrefix
+              << '_' << clo.num_blks[0] << '-' << clo.num_blks[1] << '-'
+              << clo.num_blks[2]
+              << '_' << clo.tmin << '-' << clo.tmax
+              << extension;
 
   return outFileName.str();
 }
 
+
 void
-printBlocksToStdOut(bd::IndexFile const &indexFile) {
+printBlocksToStdOut(bd::IndexFile const &indexFile)
+{
   std::cout << "{\n";
-  for (bd::FileBlock *block : indexFile.blocks()) {
+  for (bd::FileBlock *block : indexFile.getBlocks()) {
     std::cout << *block << std::endl;
   }
   std::cout << "}\n";
 }
 
+
 void
-writeBlocksToFile(bd::IndexFile const &indexFile, CommandLineOptions const &clo) {
+writeIndexFileToDisk(bd::IndexFile const &indexFile, CommandLineOptions const &clo)
+{
 
-  switch (clo.outputFileType) {
+  {
+    std::string outFileName{ makeFileNameString(clo, ".json") };
+    indexFile.writeAsciiIndexFile(outFileName);
+  }
 
-    case OutputType::Ascii: {
-      std::string outFileName{ makeFileNameString(clo, ".json") };
-      indexFile.writeAsciiIndexFile(outFileName);
-      break;
-    }
+  {
+    std::string outFileName{ makeFileNameString(clo, ".bin") };
+    indexFile.writeBinaryIndexFile(outFileName);
+  }
 
-    case OutputType::Binary: {
-      std::string outFileName{ makeFileNameString(clo, ".bin") };
-      indexFile.writeBinaryIndexFile(outFileName);
-      break;
-    }
-
-  } //switch
 }
 
+
+/// \brief Generate the IndexFile!
+/// \throws std::runtime_error if rawfile can't be opened.
 template<typename Ty>
 void
 generateIndexFile(const CommandLineOptions &clo)
 {
 
-  float minmax[2];
-  minmax[0] = clo.tmin;
-  minmax[1] = clo.tmax;
+  size_t volSize{ clo.vol_dims[0]*clo.vol_dims[1]*clo.vol_dims[2] };
+  std::vector<bool> relMap(volSize, false);
 
-  try {
-    std::unique_ptr<bd::IndexFile> indexFile{
-      bd::IndexFile::fromRawFile(clo.inFile,
-                                 clo.bufferSize,
-                                 bd::to_dataType(clo.dataType),
-                                 clo.vol_dims,
-                                 clo.num_blks,
-                                 minmax) };
+  //TODO: somehow get these values!
+  std::unique_ptr<std::vector<bd::OpacityKnot>>
+      trFunc{ bd::load1dtScalar(clo.tfuncPath) };
 
-    writeBlocksToFile(*(indexFile.get()), clo);
+  bd::VoxelOpacityFunction<Ty>
+      relFunc{ *trFunc, clo.tmin, clo.tmax, clo.volMin, clo.volMax };
 
-    if (clo.printBlocks) {
-      printBlocksToStdOut(*(indexFile.get()));
-    }
-
-  } catch (std::runtime_error e) {
-    //std::cerr << e.what() << std::endl;
-    Err() << e.what();
+  bd::BufferedReader<Ty> r{ clo.bufferSize };
+  if (!r.open(clo.inFile)) {
+    throw std::runtime_error("Could not open file " + clo.inFile);
   }
+  r.start();
+
+  while (r.hasNext()) {
+    bd::Buffer<Ty> *b{ r.waitNext() };
+    bd::ParallelVoxelClassifier<Ty, bd::VoxelOpacityFunction<Ty>>
+        classifier{ &relMap, b, relFunc };
+
+    tbb::blocked_range<size_t> range{ 0, b->getNumElements() };
+
+    tbb::parallel_for(range, classifier);
+  }
+
+  // TODO: Octree decompostion of R-Map
+  // TODO: Block generation -- FileBlockCollection uses the octree.
+  // TODO: IndexFile generation
+//  std::unique_ptr<bd::IndexFile> indexFile{ new bd::IndexFile{ fileBlocks } };
+  // TODO: Write IndexFile to disk.
+//  writeIndexFileToDisk(*( indexFile.get()), clo);
+//
+//  if (clo.printBlocks) {
+//    printBlocksToStdOut(*( indexFile.get()));
+//  }
+
 }
+
 
 /// \brief Open a binary index file and print it to stdout or write it to json file.
 void
-convert(CommandLineOptions & clo)
+convert(CommandLineOptions &clo)
 {
 
   std::unique_ptr<bd::IndexFile> index{
       bd::IndexFile::fromBinaryIndexFile(clo.inFile)
   };
 
-  if (clo.printBlocks){
+  if (clo.printBlocks) {
 
     // Print blocks in json format to standard out.
     index->writeAsciiIndexFile(std::cout);
@@ -112,14 +138,15 @@ convert(CommandLineOptions & clo)
     // Otherwise, just write the blocks to a json text file.
     // We can't use makeFileNameString() because we want to use the binary file's name.
 
-    auto startName = clo.inFile.rfind('/') + 1;
-    auto endName = startName + (clo.inFile.size() - clo.inFile.rfind('.'));
+    auto startName = clo.inFile.rfind('/')+1;
+    auto endName = startName+( clo.inFile.size() - clo.inFile.rfind('.'));
     std::string name(clo.inFile, startName, endName);
     name += ".json";
-    index->writeAsciiIndexFile(clo.outFilePath + '/' + name);
+    index->writeAsciiIndexFile(clo.outFilePath+'/'+name);
 
   }
 }
+
 
 void
 generate(CommandLineOptions &clo)
@@ -167,14 +194,13 @@ main(int argc, const char *argv[])
 
   using preproc::CommandLineOptions;
   CommandLineOptions clo;
-  if (parseThem(argc, argv, clo) == 0) {
+  if (parseThem(argc, argv, clo)==0) {
     Err() << "Command line parse error, exiting.";
     bd::logger::shutdown();
     return 1;
   }
 
-
-  switch(clo.actionType) {
+  switch (clo.actionType) {
     case preproc::ActionType::Generate:
       preproc::generate(clo);
       break;

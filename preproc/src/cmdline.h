@@ -27,7 +27,7 @@ struct CommandLineOptions
   // output file prefix
   std::string outFilePrefix;
   // output file type
-  OutputType outputFileType;
+//  OutputType outputFileType;
   // transfer function file path
   std::string tfuncPath;
   // for .dat descriptor file (currently unimplemented)
@@ -48,6 +48,11 @@ struct CommandLineOptions
   float tmax;
   // threshold minimum
   float tmin;
+  // volume min value
+  double volMin;
+  // volume max value
+  double volMax;
+
 };
 
 
