@@ -16,7 +16,9 @@ link_directories("/usr/lib64/")
 target_link_libraries(preproc
         debug ${CRUFT_DEBUG_LIBRARIES}
         optimized ${CRUFT_RELEASE_LIBRARIES}
-        "tbb" )
+        debug ${TBB_DEBUG_LIBRARIES}
+        optimized ${TBB_RELEASE_LIBRARIES}
+        )
 
 install(TARGETS preproc RUNTIME
         DESTINATION "bin/")

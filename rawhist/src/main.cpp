@@ -22,19 +22,18 @@ namespace rawhist
 
 namespace
 {
-int histcount[1536];
-double histmin[1536];
-double histmax[1536];
-long long totalcount{ 0 };
-float rawmin{ 0 };
-float rawmax{ 0 };
+  int histcount[1536];
+  double histmin[1536];
+  double histmax[1536];
+  long long totalcount{ 0 };
+  float rawmin{ 0 };
+  float rawmax{ 0 };
 
 } // namespace
 
 
 template<typename Ty>
-void
-volumeMinMax(std::string const& path, size_t szbuf, float* volMin, float* volMax)
+void volumeMinMax(std::string const &path, size_t szbuf, float* volMin, float* volMax)
 {
   bd::BufferedReader<Ty> r{ szbuf };
   if (!r.open(path)) {
@@ -50,19 +49,17 @@ volumeMinMax(std::string const& path, size_t szbuf, float* volMin, float* volMax
   bd::Info() << "Begin min/max computation.";
   while (r.hasNext()) {
     bd::Dbg() << "Waiting for full buffer";
-    bd::Buffer<Ty>* buf = r.waitNext();
-    bd::Dbg() << "Got a full buffer: " << buf->getNumElements();
+    bd::Buffer<Ty> *buf = r.waitNext();
+    bd::Dbg() << "Got a full buffer: " << buf->elements();
 
-    tbb::blocked_range<size_t> range(0, buf->getNumElements());
+    tbb::blocked_range<size_t> range(0, buf->elements());
     bd::ParallelMinMax<Ty> mm(buf);
     tbb::parallel_reduce(range, mm);
 
-    if (max<mm.max_value) {
+    if (max < mm.max_value)
       max = mm.max_value;
-    }
-    if (min>mm.min_value) {
+    if (min > mm.min_value)
       min = mm.min_value;
-    }
 
     r.waitReturn(buf);
   }
@@ -74,11 +71,10 @@ volumeMinMax(std::string const& path, size_t szbuf, float* volMin, float* volMax
 
 
 template<typename Ty>
-void
-hist(std::string const& fileName, size_t szbuf, float rawmin, float rawmax)
+void hist(std::string const &fileName, size_t szbuf, float rawmin, float rawmax)
 {
   bd::BufferedReader<Ty> r(szbuf);
-  if (!r.open(fileName)) {
+  if (! r.open(fileName)) {
     bd::Err() << "File " << fileName << " was not opened.";
     return;
   }
@@ -89,26 +85,24 @@ hist(std::string const& fileName, size_t szbuf, float rawmin, float rawmax)
 
   while (r.hasNext()) {
     bd::Dbg() << "Waiting for full buffer";
-    bd::Buffer<Ty>* buf = r.waitNext();
-    bd::Dbg() << "Got a full buffer: " << buf->getNumElements();
+    bd::Buffer<Ty> *buf = r.waitNext();
+    bd::Dbg() << "Got a full buffer: " << buf->elements();
 
-    tbb::blocked_range<size_t> range(0, buf->getNumElements());
+    tbb::blocked_range<size_t> range(0, buf->elements());
     bd::ParallelHistogram<Ty> histo(buf, rawmin, rawmax);
     tbb::parallel_reduce(range, histo);
 
     // Accumulate this buffer's histo
-    for (size_t i{ 0 }; i<1536; ++i) {
-      histcount[i] += histo.getBuckets()[i];
+    for(size_t i{ 0 }; i < 1536; ++i) {
+      histcount[i] += histo.buckets()[i];
 
-      if (histo.getHistMin()[i]<histmin[i]) {
-        histmin[i] = histo.getHistMin()[i];
-      }
+      if (histo.histMin()[i] < histmin[i])
+        histmin[i] = histo.histMin()[i];
 
-      if (histo.getHistMax()[i]>histmax[i]) {
-        histmax[i] = histo.getHistMax()[i];
-      }
+      if (histo.histMax()[i] > histmax[i])
+        histmax[i] = histo.histMax()[i];
     }
-    totalcount += histo.getTotalCount();
+    totalcount += histo.totalCount();
 
     r.waitReturn(buf);
   }
@@ -116,12 +110,10 @@ hist(std::string const& fileName, size_t szbuf, float rawmin, float rawmax)
   bd::Info() << "Finished volume histogram computation.";
 }
 
-
 template<typename Ty>
-void
-doit(CommandLineOptions const& clo)
+void doit(CommandLineOptions const &clo)
 {
-  for (int i = 0; i<1536; ++i) {
+  for (int i = 0; i < 1536; ++i) {
     histmin[i] = std::numeric_limits<double>::max();
     histmax[i] = std::numeric_limits<double>::lowest();
     histcount[i] = 0;
@@ -129,40 +121,34 @@ doit(CommandLineOptions const& clo)
 
   volumeMinMax<Ty>(clo.rawFilePath, clo.bufferSize, &rawmin, &rawmax);
   hist<Ty>(clo.rawFilePath, clo.bufferSize, rawmin, rawmax);
-
 }
 
-
-void
-printHisto(std::ostream& os)
+void printHisto(std::ostream &os)
 {
   os << std::fixed << std::setprecision(6);
   os << "MinMax " << std::setw(20) << rawmin << std::setw(20) << rawmax << '\n';
   os << "#Index Perc Offset Min Max\n";
   double pindex = 0;
-  for (int i = 0; i<1536; i++) {
-    double pcount = (double) histcount[i]/totalcount;
-    if (histcount[i]!=0) {
-      os << std::left << std::setw(5) << i
-         << std::left << std::setw(20) << pcount
-         << std::left << std::setw(20) << pindex
-         << std::left << std::setw(20) << histmin[i]
-         << std::left << std::setw(20) << histmax[i] << '\n';
-    } else {
-      os << std::left << std::setw(5) << i
-         << std::left << std::setw(20) << 0.0
-         << std::left << std::setw(20) << pindex
-         << std::left << std::setw(20) << 0.0
-         << std::left << std::setw(20) << 0.0 << '\n';
+  for (int i = 0; i < 1536; i++)
+  {
+    double pcount = (double)histcount[i]/totalcount;
+    if (histcount[i] != 0)
+    {
+      os << std::left << std::setw(5) << i  << std::left << std::setw(20) << pcount << std::left << std::setw(20) << pindex
+         << std::left << std::setw(20) << histmin[i] << std::left << std::setw(20) << histmax[i] << '\n';
+    }
+    else
+    {
+      os << std::left << std::setw(5) << i << std::left << std::setw(20) << 0.0 << std::left << std::setw(20) << pindex
+         << std::left << std::setw(20) << 0.0 << std::left << std::setw(20) << 0.0 << '\n';
     }
     pindex += pcount;
   }
 
 }
 
-
 void
-generate(CommandLineOptions& clo)
+generate(CommandLineOptions &clo)
 {
   // Decide what data type we have and call execute to kick off the processing.
   bd::DataType type{ bd::to_dataType(clo.dataType) };
@@ -170,14 +156,17 @@ generate(CommandLineOptions& clo)
 
     case bd::DataType::UnsignedCharacter:
       doit<unsigned char>(clo);
+
       break;
 
     case bd::DataType::UnsignedShort:
       doit<unsigned short>(clo);
+
       break;
 
     case bd::DataType::Float:
       doit<float>(clo);
+
       break;
 
     default:
@@ -185,42 +174,43 @@ generate(CommandLineOptions& clo)
       break;
   }
 
-  if (!clo.outputFilePath.empty()) {
+
+  if (! clo.outputFilePath.empty()) {
 
     std::ofstream os(clo.outputFilePath);
     if (!os.is_open()) {
-      // file wasn't opened, print to stdout
       bd::Err() << "Could not open output file: "
                 << clo.outputFilePath << ", using stdout instead.";
       printHisto(std::cout);
     } else {
-      // the file was opened! print to the given file path.
       printHisto(os);
     }
   } else {
-    // no file path was given, print to stdout
     printHisto(std::cout);
   }
+
+  //print histo to stdout.
+
 }
 
 } // namespace rawhist
 
 
-int
-main(int argc, const char* argv[])
+int main(int argc, const char *argv[])
 {
   rawhist::CommandLineOptions clo;
-  if (rawhist::parseThem(argc, argv, clo)==0) {
-    std::cout << "No arguments provided.\nPlease use -h for usage info."
+  if (rawhist::parseThem(argc, argv, clo) == 0) {
+    std::cerr << "No arguments provided.\nPlease use -h for usage info."
               << std::endl;
     return 1;
   }
 
-  if (!clo.datFilePath.empty()) {
+  if(! clo.datFilePath.empty()) {
     bd::DatFileData dat;
     bd::parseDat(clo.datFilePath, dat);
     clo.dataType = bd::to_string(dat.dataType);
   }
+
 
   rawhist::generate(clo);
 
