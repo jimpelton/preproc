@@ -103,6 +103,8 @@ generateIndexFile(const CommandLineOptions &clo)
     tbb::blocked_range<size_t> range{ 0, b->getNumElements() };
 
     tbb::parallel_for(range, classifier);
+
+    r.waitReturn(b);
   }
 
   // TODO: Octree decompostion of R-Map
