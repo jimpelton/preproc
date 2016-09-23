@@ -10,7 +10,8 @@
 #include <bd/io/indexfile.h>
 #include <bd/log/logger.h>
 #include <bd/io/datfile.h>
-#include <bd/volume/voxelopacityfilter.h>
+#include <bd/filter/voxelopacityfilter.h>
+#include <bd/tbb/parallelfor_voxelclassifier.h>
 #include <bd/volume/transferfunction.h>
 
 #include <tbb/tbb.h>
@@ -27,8 +28,6 @@ using bd::Info;
 namespace preproc
 {
 
-using RelMapType = std::vector<bool>;
-using TrFuncType = std::vector<bd::OpacityKnot>;
 
 std::string
 makeFileNameString(const CommandLineOptions &clo, const char *extension)
@@ -71,6 +70,45 @@ writeIndexFileToDisk(bd::IndexFile const &indexFile, CommandLineOptions const &c
 
 }
 
+template<typename Ty>
+void countBlockEmptyVoxels(bd::FileBlockCollection<Ty> &collection, std::vector<bool> &relMap)
+{
+  std::vector<bd::FileBlock *> const & blocks = collection.blocks();
+  size_t mapSize{ relMap.size() };
+  size_t sofar{ 0 };
+  size_t const bufferSize{ std::pow(2, 30) }; // one gig
+  bool *boolArray{ new bool[ bufferSize ] };
+
+  while ( sofar < mapSize ) {
+    size_t toGet{ bufferSize };
+    if (sofar - bufferSize < 0) {
+      toGet = mapSize - sofar;
+    }
+    for(int i = 0; i < toGet; ++i) {
+      boolArray[i] = relMap[sofar + i];
+    }
+
+    bd::Buffer<bool> buf{ boolArray, toGet, sofar };
+    auto isRelevant = [] (Ty x) -> bool { return x == 1; };
+    bd::ParallelReduceBlockEmpties<bool> empties(&buf, &collection.volume(), isRelevant);
+
+    buf.setIndexOffset(sofar);
+    buf.setNumElements(toGet);
+    tbb::blocked_range<size_t> range{ 0, buf.getNumElements() };
+    tbb::parallel_reduce(range, empties);
+
+    // accumulate empty voxel counts.
+    for(int i{ 0 }; i < blocks.size(); ++i) {
+      uint64_t e{ empties.empties()[i] };
+      blocks[i]->empty_voxels += e;
+    }
+
+    sofar += toGet;
+  }
+
+
+
+}
 
 /// \brief Generate the IndexFile!
 /// \throws std::runtime_error if rawfile can't be opened.
@@ -78,11 +116,11 @@ template<typename Ty>
 void
 generateIndexFile(const CommandLineOptions &clo)
 {
+  //TODO: compute block statistics first.
 
   size_t volSize{ clo.vol_dims[0]*clo.vol_dims[1]*clo.vol_dims[2] };
   std::vector<bool> relMap(volSize, false);
 
-  //TODO: somehow get these values!
   std::unique_ptr<std::vector<bd::OpacityKnot>>
       trFunc{ bd::load1dtScalar(clo.tfuncPath) };
 
@@ -97,22 +135,32 @@ generateIndexFile(const CommandLineOptions &clo)
 
   while (r.hasNext()) {
     bd::Buffer<Ty> *b{ r.waitNext() };
-    bd::ParallelVoxelClassifier<Ty, bd::VoxelOpacityFunction<Ty>>
+    bd::ParallelForVoxelClassifier<Ty, bd::VoxelOpacityFunction<Ty>>
         classifier{ &relMap, b, relFunc };
 
     tbb::blocked_range<size_t> range{ 0, b->getNumElements() };
-
     tbb::parallel_for(range, classifier);
 
     r.waitReturn(b);
   }
 
   // TODO: Octree decompostion of R-Map
-  // TODO: Block generation -- FileBlockCollection uses the octree.
+  // TODO: Block generation
+  bd::FileBlockCollection<Ty>
+      collection{ { clo.vol_dims[0], clo.vol_dims[1], clo.vol_dims[2] },
+                  { clo.num_blks[0], clo.vol_dims[1], clo.vol_dims[2] } };
+
+  countBlockEmptyVoxels(collection, relMap);
+
   // TODO: IndexFile generation
-//  std::unique_ptr<bd::IndexFile> indexFile{ new bd::IndexFile{ fileBlocks } };
+  std::unique_ptr<bd::IndexFile>
+      indexFile{ bd::IndexFile::fromBlockCollection<Ty>(clo.inFile,
+                                                        collection,
+                                                        bd::to_dataType(clo.dataType)) };
+
   // TODO: Write IndexFile to disk.
-//  writeIndexFileToDisk(*( indexFile.get()), clo);
+  writeIndexFileToDisk(*( indexFile.get()), clo);
+
 //
 //  if (clo.printBlocks) {
 //    printBlocksToStdOut(*( indexFile.get()));
@@ -150,6 +198,7 @@ convert(CommandLineOptions &clo)
 }
 
 
+/// \throws std::runtime_error if rawfile can't be opened.
 void
 generate(CommandLineOptions &clo)
 {
@@ -204,7 +253,11 @@ main(int argc, const char *argv[])
 
   switch (clo.actionType) {
     case preproc::ActionType::Generate:
-      preproc::generate(clo);
+      try {
+        preproc::generate(clo);
+      } catch (std::exception e) {
+        bd::Err() << e.what();
+      }
       break;
     case preproc::ActionType::Convert:
       preproc::convert(clo);
