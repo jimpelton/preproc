@@ -8,14 +8,16 @@
 #include <bd/log/logger.h>
 #include <bd/io/buffer.h>
 #include <bd/io/bufferedreader.h>
-#include <bd/tbb/parallelminmax.h>
-#include <bd/tbb/parallelhistogram.h>
+#include <bd/tbb/parallelreduce_minmax.h>
+#include <bd/tbb/parallelreduce_histogram.h>
 #include <bd/io/datfile.h>
 
 #include <iostream>
 #include <fstream>
 #include <unistd.h>
 #include <iomanip>
+#include <tbb/blocked_range.h>
+#include <tbb/parallel_reduce.h>
 
 namespace rawhist
 {
@@ -50,10 +52,10 @@ void volumeMinMax(std::string const &path, size_t szbuf, float* volMin, float* v
   while (r.hasNext()) {
     bd::Dbg() << "Waiting for full buffer";
     bd::Buffer<Ty> *buf = r.waitNext();
-    bd::Dbg() << "Got a full buffer: " << buf->elements();
+    bd::Dbg() << "Got a full buffer: " << buf->getNumElements();
 
-    tbb::blocked_range<size_t> range(0, buf->elements());
-    bd::ParallelMinMax<Ty> mm(buf);
+    tbb::blocked_range<size_t> range(0, buf->getNumElements());
+    bd::ParallelReduceMinMax<Ty> mm(buf);
     tbb::parallel_reduce(range, mm);
 
     if (max < mm.max_value)
@@ -86,23 +88,23 @@ void hist(std::string const &fileName, size_t szbuf, float rawmin, float rawmax)
   while (r.hasNext()) {
     bd::Dbg() << "Waiting for full buffer";
     bd::Buffer<Ty> *buf = r.waitNext();
-    bd::Dbg() << "Got a full buffer: " << buf->elements();
+    bd::Dbg() << "Got a full buffer: " << buf->getNumElements();
 
-    tbb::blocked_range<size_t> range(0, buf->elements());
-    bd::ParallelHistogram<Ty> histo(buf, rawmin, rawmax);
+    tbb::blocked_range<size_t> range(0, buf->getNumElements());
+    bd::ParallelReduceHistogram<Ty> histo(buf, rawmin, rawmax);
     tbb::parallel_reduce(range, histo);
 
     // Accumulate this buffer's histo
     for(size_t i{ 0 }; i < 1536; ++i) {
-      histcount[i] += histo.buckets()[i];
+      histcount[i] += histo.getBuckets()[i];
 
-      if (histo.histMin()[i] < histmin[i])
-        histmin[i] = histo.histMin()[i];
+      if (histo.getHistMin()[i] < histmin[i])
+        histmin[i] = histo.getHistMin()[i];
 
-      if (histo.histMax()[i] > histmax[i])
-        histmax[i] = histo.histMax()[i];
+      if (histo.getHistMax()[i] > histmax[i])
+        histmax[i] = histo.getHistMax()[i];
     }
-    totalcount += histo.totalCount();
+    totalcount += histo.getTotalCount();
 
     r.waitReturn(buf);
   }

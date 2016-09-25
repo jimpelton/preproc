@@ -21,6 +21,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <vector>
+#include <fstream>
 
 using bd::Err;
 using bd::Info;
@@ -47,8 +48,8 @@ void
 printBlocksToStdOut(bd::IndexFile const &indexFile)
 {
   std::cout << "{\n";
-  for (bd::FileBlock *block : indexFile.getBlocks()) {
-    std::cout << *block << std::endl;
+  for (auto &block : indexFile.getBlocks()) {
+    std::cout << block << std::endl;
   }
   std::cout << "}\n";
 }
@@ -71,56 +72,43 @@ writeIndexFileToDisk(bd::IndexFile const &indexFile, CommandLineOptions const &c
 }
 
 template<typename Ty>
-void countBlockEmptyVoxels(bd::FileBlockCollection<Ty> &collection, std::vector<bool> &relMap)
+void parallelCountBlockEmptyVoxels(CommandLineOptions const &clo,
+                                   bd::FileBlockCollection<Ty> &collection,
+                                   std::string const &relMapFilePath)
 {
-  std::vector<bd::FileBlock *> const & blocks = collection.blocks();
-  size_t mapSize{ relMap.size() };
-  size_t sofar{ 0 };
-  size_t const bufferSize{ std::pow(2, 30) }; // one gig
-  bool *boolArray{ new bool[ bufferSize ] };
+  std::vector<bd::FileBlock> &blocks = collection.blocks();
 
-  while ( sofar < mapSize ) {
-    size_t toGet{ bufferSize };
-    if (sofar - bufferSize < 0) {
-      toGet = mapSize - sofar;
-    }
-    for(int i = 0; i < toGet; ++i) {
-      boolArray[i] = relMap[sofar + i];
-    }
+  bd::BufferedReader<Ty> r{ clo.bufferSize };
+  if (! r.open(relMapFilePath)){
+    throw std::runtime_error("Could not open file: " + relMapFilePath);
+  }
+  r.start();
+  uint64_t totalEmpties{ 0 };
+  while(r.hasNext()) {
+    bd::Buffer<Ty> *buf{ r.waitNext() };
+    bd::ParallelReduceBlockEmpties<Ty> empties(buf, &collection.volume(),
+                                                [] (bool x) -> bool { return x; } ); //isRelevant);
 
-    bd::Buffer<bool> buf{ boolArray, toGet, sofar };
-    auto isRelevant = [] (Ty x) -> bool { return x == 1; };
-    bd::ParallelReduceBlockEmpties<bool> empties(&buf, &collection.volume(), isRelevant);
-
-    buf.setIndexOffset(sofar);
-    buf.setNumElements(toGet);
-    tbb::blocked_range<size_t> range{ 0, buf.getNumElements() };
+    tbb::blocked_range<size_t> range{ 0, buf->getNumElements() };
     tbb::parallel_reduce(range, empties);
 
-    // accumulate empty voxel counts.
-    for(int i{ 0 }; i < blocks.size(); ++i) {
-      uint64_t e{ empties.empties()[i] };
-      blocks[i]->empty_voxels += e;
+    uint64_t const * emptyCounts{ empties.empties() };
+    for(size_t i{ 0 }; i < blocks.size(); ++i) {
+      blocks[i].empty_voxels += emptyCounts[i];
+      totalEmpties += emptyCounts[i];
     }
 
-    sofar += toGet;
+    r.waitReturn(buf);
   }
 
-
+  Info() << "Done counting empties. \n\t" << totalEmpties << " empty voxels found.";
 
 }
 
-/// \brief Generate the IndexFile!
-/// \throws std::runtime_error if rawfile can't be opened.
 template<typename Ty>
 void
-generateIndexFile(const CommandLineOptions &clo)
+createRelMap(CommandLineOptions const &clo, std::string const &tempOutFilePath)
 {
-  //TODO: compute block statistics first.
-
-  size_t volSize{ clo.vol_dims[0]*clo.vol_dims[1]*clo.vol_dims[2] };
-  std::vector<bool> relMap(volSize, false);
-
   std::unique_ptr<std::vector<bd::OpacityKnot>>
       trFunc{ bd::load1dtScalar(clo.tfuncPath) };
 
@@ -133,16 +121,45 @@ generateIndexFile(const CommandLineOptions &clo)
   }
   r.start();
 
+  size_t const bufSize{ r.singleBufferElements() * sizeof(Ty) };
+  std::vector<bool> relMap(bufSize, false);
+
+  std::ofstream outFile(tempOutFilePath);
+  if (! outFile.is_open()){
+    throw std::runtime_error("Could not open temp-rmap.bin");
+  }
+
   while (r.hasNext()) {
     bd::Buffer<Ty> *b{ r.waitNext() };
-    bd::ParallelForVoxelClassifier<Ty, bd::VoxelOpacityFunction<Ty>>
-        classifier{ &relMap, b, relFunc };
-
     tbb::blocked_range<size_t> range{ 0, b->getNumElements() };
+    bd::ParallelForVoxelClassifier<Ty, bd::VoxelOpacityFunction<Ty>, std::vector<bool>>
+        classifier{ relMap, b, relFunc };
     tbb::parallel_for(range, classifier);
-
     r.waitReturn(b);
+
+    for (size_t i{ 0 }; i < relMap.size(); ++i){
+      char s{ relMap[i] };
+      outFile.write(&s, sizeof(char));
+    }
+
   }
+  outFile.close();
+
+}
+
+
+/// \brief Generate the IndexFile!
+/// \throws std::runtime_error if rawfile can't be opened.
+template<typename Ty>
+void
+generateIndexFile(const CommandLineOptions &clo)
+{
+  //TODO: compute block statistics first.
+
+//  size_t volSize{ clo.vol_dims[0]*clo.vol_dims[1]*clo.vol_dims[2] };
+  std::string const tempOutFilePath("/home/jim/temp-rmap.bin");
+
+  createRelMap<Ty>(clo, tempOutFilePath);
 
   // TODO: Octree decompostion of R-Map
   // TODO: Block generation
@@ -150,7 +167,7 @@ generateIndexFile(const CommandLineOptions &clo)
       collection{ { clo.vol_dims[0], clo.vol_dims[1], clo.vol_dims[2] },
                   { clo.num_blks[0], clo.vol_dims[1], clo.vol_dims[2] } };
 
-  countBlockEmptyVoxels(collection, relMap);
+  parallelCountBlockEmptyVoxels(clo, collection, tempOutFilePath);
 
   // TODO: IndexFile generation
   std::unique_ptr<bd::IndexFile>
@@ -158,8 +175,10 @@ generateIndexFile(const CommandLineOptions &clo)
                                                         collection,
                                                         bd::to_dataType(clo.dataType)) };
 
+
+
   // TODO: Write IndexFile to disk.
-  writeIndexFileToDisk(*( indexFile.get()), clo);
+  writeIndexFileToDisk(*(indexFile.get()), clo);
 
 //
 //  if (clo.printBlocks) {
