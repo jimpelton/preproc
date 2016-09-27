@@ -29,7 +29,7 @@ using bd::Info;
 namespace preproc
 {
 
-
+////////////////////////////////////////////////////////////////////////////////
 std::string
 makeFileNameString(const CommandLineOptions &clo, const char *extension)
 {
@@ -44,6 +44,7 @@ makeFileNameString(const CommandLineOptions &clo, const char *extension)
 }
 
 
+////////////////////////////////////////////////////////////////////////////////
 void
 printBlocksToStdOut(bd::IndexFile const &indexFile)
 {
@@ -55,6 +56,7 @@ printBlocksToStdOut(bd::IndexFile const &indexFile)
 }
 
 
+////////////////////////////////////////////////////////////////////////////////
 void
 writeIndexFileToDisk(bd::IndexFile const &indexFile, CommandLineOptions const &clo)
 {
@@ -71,6 +73,9 @@ writeIndexFileToDisk(bd::IndexFile const &indexFile, CommandLineOptions const &c
 
 }
 
+
+/// \brief Use RMap to count the empty voxels in each block
+///
 template<typename Ty>
 void parallelCountBlockEmptyVoxels(CommandLineOptions const &clo,
                                    bd::FileBlockCollection<Ty> &collection,
@@ -78,16 +83,19 @@ void parallelCountBlockEmptyVoxels(CommandLineOptions const &clo,
 {
   std::vector<bd::FileBlock> &blocks = collection.blocks();
 
-  bd::BufferedReader<Ty> r{ clo.bufferSize };
+  bd::BufferedReader<char> r{ clo.bufferSize };
   if (! r.open(relMapFilePath)){
     throw std::runtime_error("Could not open file: " + relMapFilePath);
   }
   r.start();
   uint64_t totalEmpties{ 0 };
+  auto rfunc = [] (Ty x) -> bool { return x == 1; };
+
   while(r.hasNext()) {
-    bd::Buffer<Ty> *buf{ r.waitNext() };
-    bd::ParallelReduceBlockEmpties<Ty> empties(buf, &collection.volume(),
-                                                [] (bool x) -> bool { return x; } ); //isRelevant);
+    bd::Buffer<char> *buf{ r.waitNext() };
+
+    bd::ParallelReduceBlockEmpties<char, decltype(rfunc)>
+        empties{ buf, &collection.volume(), rfunc };
 
     tbb::blocked_range<size_t> range{ 0, buf->getNumElements() };
     tbb::parallel_reduce(range, empties);
@@ -105,6 +113,10 @@ void parallelCountBlockEmptyVoxels(CommandLineOptions const &clo,
 
 }
 
+
+/// \brief Create the relevance map in parallel based on the transfer function.
+/// \param clo The command line options
+/// \param tempOutFilePath Path that the temp RMap scratch file should be written to.
 template<typename Ty>
 void
 createRelMap(CommandLineOptions const &clo, std::string const &tempOutFilePath)
@@ -122,7 +134,7 @@ createRelMap(CommandLineOptions const &clo, std::string const &tempOutFilePath)
   r.start();
 
   size_t const bufSize{ r.singleBufferElements() * sizeof(Ty) };
-  std::vector<bool> relMap(bufSize, false);
+  std::vector<char> relMap(bufSize, 0);
 
   std::ofstream outFile(tempOutFilePath);
   if (! outFile.is_open()){
@@ -131,18 +143,17 @@ createRelMap(CommandLineOptions const &clo, std::string const &tempOutFilePath)
 
   while (r.hasNext()) {
     bd::Buffer<Ty> *b{ r.waitNext() };
+
     tbb::blocked_range<size_t> range{ 0, b->getNumElements() };
-    bd::ParallelForVoxelClassifier<Ty, bd::VoxelOpacityFunction<Ty>, std::vector<bool>>
+    bd::ParallelForVoxelClassifier<Ty, bd::VoxelOpacityFunction<Ty>, std::vector<char>>
         classifier{ relMap, b, relFunc };
     tbb::parallel_for(range, classifier);
     r.waitReturn(b);
 
-    for (size_t i{ 0 }; i < relMap.size(); ++i){
-      char s{ relMap[i] };
-      outFile.write(&s, sizeof(char));
-    }
-
+    // Write RMap for this buffer out to disk.
+    outFile.write(relMap.data(), b->getNumElements()*sizeof(char));
   }
+
   outFile.close();
 
 }
@@ -154,9 +165,8 @@ template<typename Ty>
 void
 generateIndexFile(const CommandLineOptions &clo)
 {
-  //TODO: compute block statistics first.
 
-//  size_t volSize{ clo.vol_dims[0]*clo.vol_dims[1]*clo.vol_dims[2] };
+
   std::string const tempOutFilePath("/home/jim/temp-rmap.bin");
 
   createRelMap<Ty>(clo, tempOutFilePath);
@@ -165,55 +175,25 @@ generateIndexFile(const CommandLineOptions &clo)
   // TODO: Block generation
   bd::FileBlockCollection<Ty>
       collection{ { clo.vol_dims[0], clo.vol_dims[1], clo.vol_dims[2] },
-                  { clo.num_blks[0], clo.vol_dims[1], clo.vol_dims[2] } };
+                  { clo.num_blks[0], clo.num_blks[1], clo.num_blks[2] } };
+
+  collection.volume().min(clo.volMin);
+  collection.volume().max(clo.volMax);
 
   parallelCountBlockEmptyVoxels(clo, collection, tempOutFilePath);
 
   // TODO: IndexFile generation
   std::unique_ptr<bd::IndexFile>
-      indexFile{ bd::IndexFile::fromBlockCollection<Ty>(clo.inFile,
-                                                        collection,
-                                                        bd::to_dataType(clo.dataType)) };
+      indexFile{
+          bd::IndexFile::fromBlockCollection<Ty>(clo.inFile,
+                                                 collection,
+                                                 bd::to_dataType(clo.dataType)) };
 
 
 
   // TODO: Write IndexFile to disk.
   writeIndexFileToDisk(*(indexFile.get()), clo);
 
-//
-//  if (clo.printBlocks) {
-//    printBlocksToStdOut(*( indexFile.get()));
-//  }
-
-}
-
-
-/// \brief Open a binary index file and print it to stdout or write it to json file.
-void
-convert(CommandLineOptions &clo)
-{
-
-  std::unique_ptr<bd::IndexFile> index{
-      bd::IndexFile::fromBinaryIndexFile(clo.inFile)
-  };
-
-  if (clo.printBlocks) {
-
-    // Print blocks in json format to standard out.
-    index->writeAsciiIndexFile(std::cout);
-
-  } else {
-
-    // Otherwise, just write the blocks to a json text file.
-    // We can't use makeFileNameString() because we want to use the binary file's name.
-
-    auto startName = clo.inFile.rfind('/')+1;
-    auto endName = startName+( clo.inFile.size() - clo.inFile.rfind('.'));
-    std::string name(clo.inFile, startName, endName);
-    name += ".json";
-    index->writeAsciiIndexFile(clo.outFilePath+'/'+name);
-
-  }
 }
 
 
@@ -255,11 +235,42 @@ generate(CommandLineOptions &clo)
   }
 }
 
+
+/// \brief Open a binary index file and print it to stdout or write it to json file.
+void
+convert(CommandLineOptions &clo)
+{
+
+  std::unique_ptr<bd::IndexFile> index{
+      bd::IndexFile::fromBinaryIndexFile(clo.inFile)
+  };
+
+  if (clo.printBlocks) {
+
+    // Print blocks in json format to standard out.
+    index->writeAsciiIndexFile(std::cout);
+
+  } else {
+
+    // Otherwise, just write the blocks to a json text file.
+    // We can't use makeFileNameString() because we want to use the binary file's name.
+
+    auto startName = clo.inFile.rfind('/')+1;
+    auto endName = startName+( clo.inFile.size() - clo.inFile.rfind('.'));
+    std::string name(clo.inFile, startName, endName);
+    name += ".json";
+    index->writeAsciiIndexFile(clo.outFilePath+'/'+name);
+
+  }
+}
+
 } // namespace preproc
+
 
 ///////////////////////////////////////////////////////////////////////////////
 int
 main(int argc, const char *argv[])
+try
 {
 
   using preproc::CommandLineOptions;
@@ -290,5 +301,10 @@ main(int argc, const char *argv[])
   bd::logger::shutdown();
 
   return 0;
+
+} catch (std::exception e) {
+  Err() << "Caught exception in main: " << e.what();
+  bd::logger::shutdown();
+  return 1;
 }
 
