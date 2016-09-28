@@ -25,15 +25,30 @@ try
       fileArg("f", "in-file", "Path to data file.", false, "", "string");
   cmd.add(fileArg);
 
+
   //output file
   TCLAP::ValueArg<std::string>
-      outFilePathArg("o",
-                     "outfile-path",
+      outFileDirArg("o",
+                     "outfile-dir",
                      "Directory to write output file into (default is '.')",
                      false,
                      ".",
                      "string");
-  cmd.add(outFilePathArg);
+  cmd.add(outFileDirArg);
+
+
+  TCLAP::ValueArg<std::string>
+      rmapFilePathArg("r",
+                   "rmap-outfile",
+                   "File to write the rmap to (default is 'rmap-temp.bin'). Suggest that "
+                       "the rmap is written to a separate physical disk from the "
+                       "input raw file.",
+                   false,
+                   "rmap-temp.bin",
+                   "string");
+  cmd.add(rmapFilePathArg);
+
+
 
   //output file prefix
   TCLAP::ValueArg<std::string>
@@ -59,6 +74,7 @@ try
       tfuncArg("u", "tfunc", "Path to transfer function file.", false, "", "string");
   cmd.add(tfuncArg);
 
+
   // .dat file
   TCLAP::ValueArg<std::string>
       datFileArg("d", "dat-file", "Path to .dat file", false, "", "string");
@@ -72,18 +88,22 @@ try
                    &dataTypeAllowValues);
   cmd.add(dataTypeArg);
 
+
   TCLAP::SwitchArg readArg("c", "convert", "Read existing index file");
   cmd.add(readArg);
 
 //  TCLAP::SwitchArg writeArg("g", "generate", "Write new index file from raw file");
 //  cmd.add(writeArg);
 
+
   // volume dims
   TCLAP::ValueArg<size_t> xdimArg("", "volx", "Volume x dim.", false, 1, "uint");
   cmd.add(xdimArg);
 
+
   TCLAP::ValueArg<size_t> ydimArg("", "voly", "Volume y dim.", false, 1, "uint");
   cmd.add(ydimArg);
+
 
   TCLAP::ValueArg<size_t> zdimArg("", "volz", "Volume z dim.", false, 1, "uint");
   cmd.add(zdimArg);
@@ -93,8 +113,10 @@ try
   TCLAP::ValueArg<size_t> xBlocksArg("", "nbx", "Num blocks x dim", false, 1, "uint");
   cmd.add(xBlocksArg);
 
+
   TCLAP::ValueArg<size_t> yBlocksArg("", "nby", "Num blocks y dim", false, 1, "uint");
   cmd.add(yBlocksArg);
+
 
   TCLAP::ValueArg<size_t> zBlocksArg("", "nbz", "Num blocks z dim", false, 1, "uint");
   cmd.add(zBlocksArg);
@@ -106,22 +128,26 @@ try
       ("b", "buffer-size", "Buffer size bytes", false, sixty_four_megs, "uint");
   cmd.add(bufferSizeArg);
 
+
   // threshold min/max
   TCLAP::ValueArg<float> tmin("", "tmin", "Thresh min", false,
                               std::numeric_limits<float>::lowest(), "float");
   cmd.add(tmin);
 
+
   TCLAP::ValueArg<float> tmax("", "tmax", "Thresh max", false,
                               std::numeric_limits<float>::max(), "float");
   cmd.add(tmax);
 
+
   // volume minimum value
-  TCLAP::ValueArg<double> volMinArg("", "vol-min", "Volume min", false,
+  TCLAP::ValueArg<double> volMinArg("", "vol-min", "Volume min. Default is MIN_DOUBLE", false,
                                     std::numeric_limits<double>::lowest(), "double");
   cmd.add(volMinArg);
 
+
   // volume maximum value
-  TCLAP::ValueArg<double> volMaxArg("", "vol-max", "Volume max", false,
+  TCLAP::ValueArg<double> volMaxArg("", "vol-max", "Volume max. Default is MAX_DOUBLE", false,
                               std::numeric_limits<double>::max(), "double");
   cmd.add(volMaxArg);
 
@@ -134,8 +160,9 @@ try
 
   opts.actionType = readArg.getValue() ? ActionType::Convert : ActionType::Generate;
   opts.inFile = fileArg.getValue();
-  opts.outFilePath = outFilePathArg.getValue();
+  opts.outFilePath = outFileDirArg.getValue();
   opts.outFilePrefix = outFilePrefixArg.getValue();
+  opts.rmapFilePath = rmapFilePathArg.getValue();
   opts.tfuncPath = tfuncArg.getValue();
   opts.datFilePath = datFileArg.getValue();
   opts.dataType = dataTypeArg.getValue();
@@ -197,6 +224,7 @@ operator<<(std::ostream &os, const CommandLineOptions &opts)
       << "\n" "Input file path: " << opts.inFile
       << "\n" "Output file path: " << opts.outFilePath
       << "\n" "Output file prefix: " << opts.outFilePrefix
+      << "\n" "RMap output file path: " << opts.rmapFilePath
       << "\n" "Transfer function path: " << opts.tfuncPath
       << "\n" "Dat file: " << opts.datFilePath
       << "\n" "Data Type: " << opts.dataType

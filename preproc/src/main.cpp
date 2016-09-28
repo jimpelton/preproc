@@ -5,12 +5,14 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "cmdline.h"
+#include "voxelopacityfunction.h"
 
 #include <bd/util/util.h>
 #include <bd/io/indexfile.h>
 #include <bd/log/logger.h>
 #include <bd/io/datfile.h>
-#include <bd/filter/voxelopacityfilter.h>
+//#include <bd/filter/voxelopacityfilter.h>
+#include <bd/filter/valuerangefilter.h>
 #include <bd/tbb/parallelfor_voxelclassifier.h>
 #include <bd/volume/transferfunction.h>
 
@@ -75,30 +77,37 @@ writeIndexFileToDisk(bd::IndexFile const &indexFile, CommandLineOptions const &c
 
 
 /// \brief Use RMap to count the empty voxels in each block
-///
-template<typename Ty>
 void parallelCountBlockEmptyVoxels(CommandLineOptions const &clo,
-                                   bd::FileBlockCollection<Ty> &collection,
-                                   std::string const &relMapFilePath)
+                                   bd::Volume &volume,
+                                   std::vector<bd::FileBlock> &blocks)
 {
-  std::vector<bd::FileBlock> &blocks = collection.blocks();
 
   bd::BufferedReader<char> r{ clo.bufferSize };
-  if (! r.open(relMapFilePath)){
-    throw std::runtime_error("Could not open file: " + relMapFilePath);
+  if (! r.open(clo.rmapFilePath)){
+    throw std::runtime_error("Could not open file: " + clo.rmapFilePath);
   }
   r.start();
+
+
+  // relevance function
+  auto rfunc = [] (char x) -> bool { return x == 1; };
+
+
   uint64_t totalEmpties{ 0 };
-  auto rfunc = [] (Ty x) -> bool { return x == 1; };
 
   while(r.hasNext()) {
+
+
     bd::Buffer<char> *buf{ r.waitNext() };
 
+
     bd::ParallelReduceBlockEmpties<char, decltype(rfunc)>
-        empties{ buf, &collection.volume(), rfunc };
+        empties{ buf, &volume, rfunc };
+
 
     tbb::blocked_range<size_t> range{ 0, buf->getNumElements() };
     tbb::parallel_reduce(range, empties);
+
 
     uint64_t const * emptyCounts{ empties.empties() };
     for(size_t i{ 0 }; i < blocks.size(); ++i) {
@@ -106,9 +115,14 @@ void parallelCountBlockEmptyVoxels(CommandLineOptions const &clo,
       totalEmpties += emptyCounts[i];
     }
 
+
     r.waitReturn(buf);
+
+
   }
 
+
+  //TODO: volume.totalempties(totalempties);
   Info() << "Done counting empties. \n\t" << totalEmpties << " empty voxels found.";
 
 }
@@ -117,15 +131,19 @@ void parallelCountBlockEmptyVoxels(CommandLineOptions const &clo,
 /// \brief Create the relevance map in parallel based on the transfer function.
 /// \param clo The command line options
 /// \param tempOutFilePath Path that the temp RMap scratch file should be written to.
+/// \throws std::runtime_error If the raw file could not be opened.
 template<typename Ty>
 void
-createRelMap(CommandLineOptions const &clo, std::string const &tempOutFilePath)
+createRelMap(CommandLineOptions const &clo)
 {
-  std::unique_ptr<std::vector<bd::OpacityKnot>>
-      trFunc{ bd::load1dtScalar(clo.tfuncPath) };
+  std::vector<bd::OpacityKnot>
+      trFunc( bd::load1dtScalar(clo.tfuncPath) );
 
-  bd::VoxelOpacityFunction<Ty>
-      relFunc{ *trFunc, clo.tmin, clo.tmax, clo.volMin, clo.volMax };
+
+  preproc::VoxelOpacityFunction<Ty>
+      relFunc{ trFunc, clo.volMin, clo.volMax };
+
+//  bd::ValueRangeFunction<Ty> relFunc{ clo.tmin, clo.tmax };
 
   bd::BufferedReader<Ty> r{ clo.bufferSize };
   if (!r.open(clo.inFile)) {
@@ -133,25 +151,37 @@ createRelMap(CommandLineOptions const &clo, std::string const &tempOutFilePath)
   }
   r.start();
 
-  size_t const bufSize{ r.singleBufferElements() * sizeof(Ty) };
-  std::vector<char> relMap(bufSize, 0);
 
-  std::ofstream outFile(tempOutFilePath);
+  std::ofstream outFile{ clo.rmapFilePath };
   if (! outFile.is_open()){
     throw std::runtime_error("Could not open temp-rmap.bin");
   }
 
+
+  size_t const bufSize{ r.singleBufferElements() * sizeof(Ty) };
+  std::vector<float> relMap(bufSize, 0);
+
+
   while (r.hasNext()) {
+
     bd::Buffer<Ty> *b{ r.waitNext() };
 
-    tbb::blocked_range<size_t> range{ 0, b->getNumElements() };
-    bd::ParallelForVoxelClassifier<Ty, bd::VoxelOpacityFunction<Ty>, std::vector<char>>
+    bd::ParallelForVoxelClassifier<Ty, preproc::VoxelOpacityFunction<Ty>, std::vector<float>>
+//    bd::ParallelForVoxelClassifier<Ty, bd::ValueRangeFunction<Ty>, std::vector<char>>
         classifier{ relMap, b, relFunc };
+
+
+    tbb::blocked_range<size_t> range{ 0, b->getNumElements() };
     tbb::parallel_for(range, classifier);
+
+
     r.waitReturn(b);
 
+
     // Write RMap for this buffer out to disk.
-    outFile.write(relMap.data(), b->getNumElements()*sizeof(char));
+    outFile.write(reinterpret_cast<char*>(relMap.data()), b->getNumElements()*sizeof(float));
+
+
   }
 
   outFile.close();
@@ -165,34 +195,34 @@ template<typename Ty>
 void
 generateIndexFile(const CommandLineOptions &clo)
 {
+  createRelMap<Ty>(clo);
 
-
-  std::string const tempOutFilePath("/home/jim/temp-rmap.bin");
-
-  createRelMap<Ty>(clo, tempOutFilePath);
 
   // TODO: Octree decompostion of R-Map
   // TODO: Block generation
+
   bd::FileBlockCollection<Ty>
       collection{ { clo.vol_dims[0], clo.vol_dims[1], clo.vol_dims[2] },
                   { clo.num_blks[0], clo.num_blks[1], clo.num_blks[2] } };
 
+
   collection.volume().min(clo.volMin);
   collection.volume().max(clo.volMax);
 
-  parallelCountBlockEmptyVoxels(clo, collection, tempOutFilePath);
+
+//  parallelCountBlockEmptyVoxels(clo, collection.volume(), collection.blocks());
+
 
   // TODO: IndexFile generation
-  std::unique_ptr<bd::IndexFile>
-      indexFile{
-          bd::IndexFile::fromBlockCollection<Ty>(clo.inFile,
-                                                 collection,
-                                                 bd::to_dataType(clo.dataType)) };
-
+//  std::unique_ptr<bd::IndexFile>
+//      indexFile{
+//          bd::IndexFile::fromBlockCollection<Ty>(clo.inFile,
+//                                                 collection,
+//                                                 bd::to_dataType(clo.dataType)) };
 
 
   // TODO: Write IndexFile to disk.
-  writeIndexFileToDisk(*(indexFile.get()), clo);
+//  writeIndexFileToDisk(*(indexFile.get()), clo);
 
 }
 
@@ -204,19 +234,29 @@ generate(CommandLineOptions &clo)
   // if a dat file was provided, populate our CommandLineOptions with the
   // options from that dat file.
   if (!clo.datFilePath.empty()) {
+
     bd::DatFileData datfile;
     bd::parseDat(clo.datFilePath, datfile);
+
+
     clo.vol_dims[0] = datfile.rX;
     clo.vol_dims[1] = datfile.rY;
     clo.vol_dims[2] = datfile.rZ;
+
     clo.dataType = bd::to_string(datfile.dataType);
+
+
     bd::Info() << clo << std::endl; // print cmd line options
     std::cout << "\n---Begin Dat File---\n" << datfile << "\n---End Dat File---\n";
+
   }
 
   // Decide what data type we have and call execute to kick off the processing.
   bd::DataType type{ bd::to_dataType(clo.dataType) };
+
+
   switch (type) {
+
 
     case bd::DataType::UnsignedCharacter:
       preproc::generateIndexFile<unsigned char>(clo);
@@ -229,9 +269,11 @@ generate(CommandLineOptions &clo)
     case bd::DataType::Float:
       preproc::generateIndexFile<float>(clo);
       break;
+
     default:
       bd::Err() << "Unsupported/unknown datatype: " << clo.dataType << ".\n Exiting...";
       break;
+
   }
 }
 
@@ -257,8 +299,12 @@ convert(CommandLineOptions &clo)
 
     auto startName = clo.inFile.rfind('/')+1;
     auto endName = startName+( clo.inFile.size() - clo.inFile.rfind('.'));
+
+
     std::string name(clo.inFile, startName, endName);
     name += ".json";
+
+
     index->writeAsciiIndexFile(clo.outFilePath+'/'+name);
 
   }
@@ -275,36 +321,48 @@ try
 
   using preproc::CommandLineOptions;
   CommandLineOptions clo;
+
+
   if (parseThem(argc, argv, clo)==0) {
     Err() << "Command line parse error, exiting.";
     bd::logger::shutdown();
     return 1;
   }
 
+
   switch (clo.actionType) {
+
     case preproc::ActionType::Generate:
+
       try {
         preproc::generate(clo);
       } catch (std::exception e) {
         bd::Err() << e.what();
       }
       break;
+
+
     case preproc::ActionType::Convert:
       preproc::convert(clo);
       break;
+
+
     default:
       Err() << "Provide an action. Use -h for help.";
       bd::logger::shutdown();
       return 1;
   }
 
+
   bd::logger::shutdown();
 
   return 0;
 
 } catch (std::exception e) {
+
   Err() << "Caught exception in main: " << e.what();
   bd::logger::shutdown();
   return 1;
+
 }
 

@@ -26,8 +26,8 @@ struct CommandLineOptions
   std::string outFilePath;
   // output file prefix
   std::string outFilePrefix;
-  // output file type
-//  OutputType outputFileType;
+  // output file for rmap.
+  std::string rmapFilePath;
   // transfer function file path
   std::string tfuncPath;
   // for .dat descriptor file (currently unimplemented)
