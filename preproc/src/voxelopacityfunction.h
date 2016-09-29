@@ -20,12 +20,12 @@ class VoxelOpacityFunction
 public:
   /// \brief Create a filter based on the given opacity function.
   /// \note Scalars in OpacityKnots should be normalized data values.
-  VoxelOpacityFunction(const std::vector<bd::OpacityKnot> &function,
-                       const Ty &dataMin,
-                       const Ty &dataMax)
+  VoxelOpacityFunction(std::vector<bd::OpacityKnot> const &function,
+                       double const &dataMin,
+                       double const &dataMax)
       : m_func{ function }
       , m_dataMin{ dataMin }
-      , m_diff{ static_cast<double>(dataMax - dataMin) }
+      , m_diff{ dataMax - dataMin }
   {
 
   }
@@ -83,6 +83,6 @@ private:
 
 }; // class VoxelOpacityFilter
 
-} // namespace bd
+} // namespace preproc
 
 #endif // ! voxelopacityfilter_h__

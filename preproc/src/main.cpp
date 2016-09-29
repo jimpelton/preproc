@@ -136,25 +136,38 @@ template<typename Ty>
 void
 createRelMap(CommandLineOptions const &clo)
 {
-  std::vector<bd::OpacityKnot>
-      trFunc( bd::load1dtScalar(clo.tfuncPath) );
 
+  std::vector<bd::OpacityKnot> trFunc;
 
-  preproc::VoxelOpacityFunction<Ty>
-      relFunc{ trFunc, clo.volMin, clo.volMax };
+//  try {
+    trFunc = bd::load1dtScalar(clo.tfuncPath);
+//  } catch (std::exception e) {
+//    bd::Err() << e.what();
+//    return ;
+//  }
 
+  if (trFunc.size() == 0) {
+    bd::Err() << "Transfer function has size 0.";
+    return;
+  }
+
+  preproc::VoxelOpacityFunction<Ty> relFunc{ trFunc, clo.volMin, clo.volMax };
 //  bd::ValueRangeFunction<Ty> relFunc{ clo.tmin, clo.tmax };
 
   bd::BufferedReader<Ty> r{ clo.bufferSize };
   if (!r.open(clo.inFile)) {
-    throw std::runtime_error("Could not open file " + clo.inFile);
+//    throw std::runtime_error("Could not open file " + clo.inFile);
+    bd::Err() << "Could not open file " + clo.inFile;
+    return;
   }
   r.start();
 
 
   std::ofstream outFile{ clo.rmapFilePath };
   if (! outFile.is_open()){
-    throw std::runtime_error("Could not open temp-rmap.bin");
+//    throw std::runtime_error("Could not open temp-rmap.bin");
+    bd::Err() << "Could not open " << clo.rmapFilePath;
+    return;
   }
 
 
@@ -166,8 +179,9 @@ createRelMap(CommandLineOptions const &clo)
 
     bd::Buffer<Ty> *b{ r.waitNext() };
 
-    bd::ParallelForVoxelClassifier<Ty, preproc::VoxelOpacityFunction<Ty>, std::vector<float>>
-//    bd::ParallelForVoxelClassifier<Ty, bd::ValueRangeFunction<Ty>, std::vector<char>>
+//  bd::ParallelForVoxelClassifier<Ty, bd::ValueRangeFunction<Ty>, std::vector<char>>
+    bd::ParallelForVoxelClassifier
+        <Ty, preproc::VoxelOpacityFunction<Ty>, std::vector<float>>
         classifier{ relMap, b, relFunc };
 
 
@@ -179,7 +193,8 @@ createRelMap(CommandLineOptions const &clo)
 
 
     // Write RMap for this buffer out to disk.
-    outFile.write(reinterpret_cast<char*>(relMap.data()), b->getNumElements()*sizeof(float));
+    outFile.write(reinterpret_cast<char*>(relMap.data()),
+                  b->getNumElements()*sizeof(float));
 
 
   }
