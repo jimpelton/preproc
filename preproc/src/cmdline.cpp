@@ -130,14 +130,14 @@ try
 
 
   // threshold min/max
-  TCLAP::ValueArg<float> tmin("", "tmin", "Thresh min", false,
+  TCLAP::ValueArg<float> blockThreshMinArg("", "block-min", "Block threshold min", false,
                               std::numeric_limits<float>::lowest(), "float");
-  cmd.add(tmin);
+  cmd.add(blockThreshMinArg);
 
 
-  TCLAP::ValueArg<float> tmax("", "tmax", "Thresh max", false,
+  TCLAP::ValueArg<float> blockThreshMaxArg("", "block-max", "Block threshold max", false,
                               std::numeric_limits<float>::max(), "float");
-  cmd.add(tmax);
+  cmd.add(blockThreshMaxArg);
 
 
   // volume minimum value
@@ -174,8 +174,8 @@ try
   opts.num_blks[1] = yBlocksArg.getValue();
   opts.num_blks[2] = zBlocksArg.getValue();
   opts.bufferSize = convertToBytes(bufferSizeArg.getValue());
-  opts.tmin = tmin.getValue();
-  opts.tmax = tmax.getValue();
+  opts.blockThresholdMin = blockThreshMinArg.getValue();
+  opts.blockThresholdMax = blockThreshMaxArg.getValue();
   opts.volMin = volMinArg.getValue();
   opts.volMax = volMaxArg.getValue();
 
@@ -237,7 +237,7 @@ operator<<(std::ostream &os, const CommandLineOptions &opts)
       << opts.num_blks[1] << " X "
       << opts.num_blks[2]
       << "\n" "Buffer Size: " << opts.bufferSize << " bytes."
-      << "\n" "Threshold min/max: " << opts.tmin << " - " << opts.tmax
+      << "\n" "Threshold min/max: " << opts.blockThresholdMin << " - " << opts.blockThresholdMax
       << "\n" "Volume min/max : " << opts.volMin << " - " << opts.volMax
       << "\n" "Print blocks: " << std::boolalpha
       << opts.printBlocks;

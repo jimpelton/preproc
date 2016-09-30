@@ -45,9 +45,9 @@ struct CommandLineOptions
   // buffer size
   uint64_t bufferSize;
   // threshold max
-  float tmax;
+  float blockThresholdMax;
   // threshold minimum
-  float tmin;
+  float blockThresholdMin;
   // volume min value
   double volMin;
   // volume max value

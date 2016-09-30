@@ -39,7 +39,7 @@ makeFileNameString(const CommandLineOptions &clo, const char *extension)
   outFileName << clo.outFilePath << '/' << clo.outFilePrefix
               << '_' << clo.num_blks[0] << '-' << clo.num_blks[1] << '-'
               << clo.num_blks[2]
-              << '_' << clo.tmin << '-' << clo.tmax
+              << '_' << clo.blockThresholdMin << '-' << clo.blockThresholdMax
               << extension;
 
   return outFileName.str();
@@ -77,44 +77,39 @@ writeIndexFileToDisk(bd::IndexFile const &indexFile, CommandLineOptions const &c
 
 
 /// \brief Use RMap to count the empty voxels in each block
-void parallelCountBlockEmptyVoxels(CommandLineOptions const &clo,
-                                   bd::Volume &volume,
-                                   std::vector<bd::FileBlock> &blocks)
+void
+parallelCountBlockEmptyVoxels(CommandLineOptions const &clo,
+                              bd::Volume &volume,
+                              std::vector<bd::FileBlock> &blocks)
 {
 
   bd::BufferedReader<char> r{ clo.bufferSize };
-  if (! r.open(clo.rmapFilePath)){
+  if (!r.open(clo.rmapFilePath)) {
     throw std::runtime_error("Could not open file: " + clo.rmapFilePath);
   }
   r.start();
 
 
   // relevance function
-  auto rfunc = [] (char x) -> bool { return x == 1; };
-
+  auto rfunc = [](char x) -> bool { return x == 1; };
 
   uint64_t totalEmpties{ 0 };
 
-  while(r.hasNext()) {
-
+  while (r.hasNext()) {
 
     bd::Buffer<char> *buf{ r.waitNext() };
-
 
     bd::ParallelReduceBlockEmpties<char, decltype(rfunc)>
         empties{ buf, &volume, rfunc };
 
-
     tbb::blocked_range<size_t> range{ 0, buf->getNumElements() };
     tbb::parallel_reduce(range, empties);
 
-
-    uint64_t const * emptyCounts{ empties.empties() };
-    for(size_t i{ 0 }; i < blocks.size(); ++i) {
+    uint64_t const *emptyCounts{ empties.empties() };
+    for (size_t i{ 0 }; i < blocks.size(); ++i) {
       blocks[i].empty_voxels += emptyCounts[i];
       totalEmpties += emptyCounts[i];
     }
-
 
     r.waitReturn(buf);
 
@@ -133,73 +128,70 @@ void parallelCountBlockEmptyVoxels(CommandLineOptions const &clo,
 /// \param tempOutFilePath Path that the temp RMap scratch file should be written to.
 /// \throws std::runtime_error If the raw file could not be opened.
 template<typename Ty>
-void
+int
 createRelMap(CommandLineOptions const &clo)
 {
 
-  std::vector<bd::OpacityKnot> trFunc;
+//  std::vector<bd::OpacityKnot> trFunc;
 
-//  try {
-    trFunc = bd::load1dtScalar(clo.tfuncPath);
-//  } catch (std::exception e) {
-//    bd::Err() << e.what();
-//    return ;
-//  }
+  try {
+    bd::OpacityTransferFunction trFunc{ clo.tfuncPath };
 
-  if (trFunc.size() == 0) {
-    bd::Err() << "Transfer function has size 0.";
-    return;
-  }
+    if (trFunc.getNumKnots() == 0) {
+      bd::Err() << "Transfer function has size 0.";
+      return -1;
+    }
 
-  preproc::VoxelOpacityFunction<Ty> relFunc{ trFunc, clo.volMin, clo.volMax };
-//  bd::ValueRangeFunction<Ty> relFunc{ clo.tmin, clo.tmax };
+    preproc::VoxelOpacityFunction<Ty> relFunc{ trFunc, clo.volMin, clo.volMax };
+//  bd::ValueRangeFunction<Ty> relFunc{ clo.blockThresholdMin, clo.blockThresholdMax };
 
-  bd::BufferedReader<Ty> r{ clo.bufferSize };
-  if (!r.open(clo.inFile)) {
-//    throw std::runtime_error("Could not open file " + clo.inFile);
-    bd::Err() << "Could not open file " + clo.inFile;
-    return;
-  }
-  r.start();
+    bd::BufferedReader<Ty> r{ clo.bufferSize };
+    if (!r.open(clo.inFile)) {
+      bd::Err() << "Could not open file " + clo.inFile;
+      return -1;
+    }
+    r.start();
 
+    std::ofstream rmapfile{ clo.rmapFilePath };
+    if (!rmapfile.is_open()) {
+      bd::Err() << "Could not open " << clo.rmapFilePath;
+      return -1;
+    }
 
-  std::ofstream outFile{ clo.rmapFilePath };
-  if (! outFile.is_open()){
-//    throw std::runtime_error("Could not open temp-rmap.bin");
-    bd::Err() << "Could not open " << clo.rmapFilePath;
-    return;
-  }
+//    size_t const bufSize{ r.singleBufferElements() * sizeof(Ty) };
+    std::vector<double> relMap(r.singleBufferElements(), 0);
 
+    while (r.hasNext()) {
 
-  size_t const bufSize{ r.singleBufferElements() * sizeof(Ty) };
-  std::vector<float> relMap(bufSize, 0);
+      bd::Buffer<Ty> *b{ r.waitNext() };
 
+      bd::ParallelForVoxelClassifier
+          <Ty, preproc::VoxelOpacityFunction<Ty>, std::vector<double>>
+          classifier{ relMap, b, relFunc };
 
-  while (r.hasNext()) {
-
-    bd::Buffer<Ty> *b{ r.waitNext() };
-
-//  bd::ParallelForVoxelClassifier<Ty, bd::ValueRangeFunction<Ty>, std::vector<char>>
-    bd::ParallelForVoxelClassifier
-        <Ty, preproc::VoxelOpacityFunction<Ty>, std::vector<float>>
-        classifier{ relMap, b, relFunc };
+      tbb::blocked_range<size_t> range{ 0, b->getNumElements() };
+      tbb::parallel_for(range, classifier);
 
 
-    tbb::blocked_range<size_t> range{ 0, b->getNumElements() };
-    tbb::parallel_for(range, classifier);
+      r.waitReturn(b);
 
 
-    r.waitReturn(b);
+      // Write RMap for this buffer out to disk.
+      rmapfile.write(reinterpret_cast<char *>(relMap.data()),
+                     b->getNumElements() * sizeof(double));
 
+    }
 
-    // Write RMap for this buffer out to disk.
-    outFile.write(reinterpret_cast<char*>(relMap.data()),
-                  b->getNumElements()*sizeof(float));
-
+    rmapfile.close();
 
   }
+  catch (std::exception e) {
 
-  outFile.close();
+    bd::Err() << e.what();
+    return -1;
+
+  }
+  return 0;
 
 }
 
@@ -217,9 +209,8 @@ generateIndexFile(const CommandLineOptions &clo)
   // TODO: Block generation
 
   bd::FileBlockCollection<Ty>
-      collection{ { clo.vol_dims[0], clo.vol_dims[1], clo.vol_dims[2] },
-                  { clo.num_blks[0], clo.num_blks[1], clo.num_blks[2] } };
-
+      collection{{ clo.vol_dims[0], clo.vol_dims[1], clo.vol_dims[2] },
+                 { clo.num_blks[0], clo.num_blks[1], clo.num_blks[2] }};
 
   collection.volume().min(clo.volMin);
   collection.volume().max(clo.volMax);
@@ -253,13 +244,11 @@ generate(CommandLineOptions &clo)
     bd::DatFileData datfile;
     bd::parseDat(clo.datFilePath, datfile);
 
-
     clo.vol_dims[0] = datfile.rX;
     clo.vol_dims[1] = datfile.rY;
     clo.vol_dims[2] = datfile.rZ;
 
     clo.dataType = bd::to_string(datfile.dataType);
-
 
     bd::Info() << clo << std::endl; // print cmd line options
     std::cout << "\n---Begin Dat File---\n" << datfile << "\n---End Dat File---\n";
@@ -269,9 +258,7 @@ generate(CommandLineOptions &clo)
   // Decide what data type we have and call execute to kick off the processing.
   bd::DataType type{ bd::to_dataType(clo.dataType) };
 
-
   switch (type) {
-
 
     case bd::DataType::UnsignedCharacter:
       preproc::generateIndexFile<unsigned char>(clo);
@@ -312,15 +299,13 @@ convert(CommandLineOptions &clo)
     // Otherwise, just write the blocks to a json text file.
     // We can't use makeFileNameString() because we want to use the binary file's name.
 
-    auto startName = clo.inFile.rfind('/')+1;
-    auto endName = startName+( clo.inFile.size() - clo.inFile.rfind('.'));
-
+    auto startName = clo.inFile.rfind('/') + 1;
+    auto endName = startName + ( clo.inFile.size() - clo.inFile.rfind('.'));
 
     std::string name(clo.inFile, startName, endName);
     name += ".json";
 
-
-    index->writeAsciiIndexFile(clo.outFilePath+'/'+name);
+    index->writeAsciiIndexFile(clo.outFilePath + '/' + name);
 
   }
 }
@@ -337,13 +322,11 @@ try
   using preproc::CommandLineOptions;
   CommandLineOptions clo;
 
-
-  if (parseThem(argc, argv, clo)==0) {
+  if (parseThem(argc, argv, clo) == 0) {
     Err() << "Command line parse error, exiting.";
     bd::logger::shutdown();
     return 1;
   }
-
 
   switch (clo.actionType) {
 
@@ -351,23 +334,21 @@ try
 
       try {
         preproc::generate(clo);
-      } catch (std::exception e) {
+      }
+      catch (std::exception e) {
         bd::Err() << e.what();
       }
       break;
 
-
     case preproc::ActionType::Convert:
       preproc::convert(clo);
       break;
-
 
     default:
       Err() << "Provide an action. Use -h for help.";
       bd::logger::shutdown();
       return 1;
   }
-
 
   bd::logger::shutdown();
 
