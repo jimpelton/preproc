@@ -45,9 +45,13 @@ struct CommandLineOptions
   // buffer size
   uint64_t bufferSize;
   // threshold max
-  float blockThresholdMax;
+  double blockThreshold_Max;
   // threshold minimum
-  float blockThresholdMin;
+  double blockThreshold_Min;
+  // voxel opacity thresh min
+  double voxelOpacityRel_Min;
+  // voxel opacity thresh max
+  double voxelOpacityRel_Max;
   // volume min value
   double volMin;
   // volume max value

@@ -39,7 +39,7 @@ makeFileNameString(const CommandLineOptions &clo, const char *extension)
   outFileName << clo.outFilePath << '/' << clo.outFilePrefix
               << '_' << clo.num_blks[0] << '-' << clo.num_blks[1] << '-'
               << clo.num_blks[2]
-              << '_' << clo.blockThresholdMin << '-' << clo.blockThresholdMax
+              << '_' << clo.blockThreshold_Min << '-' << clo.blockThreshold_Max
               << extension;
 
   return outFileName.str();
@@ -83,7 +83,7 @@ parallelCountBlockEmptyVoxels(CommandLineOptions const &clo,
                               std::vector<bd::FileBlock> &blocks)
 {
 
-  bd::BufferedReader<char> r{ clo.bufferSize };
+  bd::BufferedReader<double> r{ clo.bufferSize };
   if (!r.open(clo.rmapFilePath)) {
     throw std::runtime_error("Could not open file: " + clo.rmapFilePath);
   }
@@ -91,15 +91,18 @@ parallelCountBlockEmptyVoxels(CommandLineOptions const &clo,
 
 
   // relevance function
-  auto rfunc = [](char x) -> bool { return x == 1; };
+  auto rfunc = [&](double x) -> bool
+  {
+    return x >= clo.voxelOpacityRel_Min && x <= clo.voxelOpacityRel_Max;
+  };
 
   uint64_t totalEmpties{ 0 };
 
   while (r.hasNext()) {
 
-    bd::Buffer<char> *buf{ r.waitNext() };
+    bd::Buffer<double> *buf{ r.waitNext() };
 
-    bd::ParallelReduceBlockEmpties<char, decltype(rfunc)>
+    bd::ParallelReduceBlockEmpties<double, decltype(rfunc)>
         empties{ buf, &volume, rfunc };
 
     tbb::blocked_range<size_t> range{ 0, buf->getNumElements() };
@@ -116,6 +119,7 @@ parallelCountBlockEmptyVoxels(CommandLineOptions const &clo,
 
   }
 
+  // TODO: compute block ratio of visibility
 
   //TODO: volume.totalempties(totalempties);
   Info() << "Done counting empties. \n\t" << totalEmpties << " empty voxels found.";
@@ -132,8 +136,6 @@ int
 createRelMap(CommandLineOptions const &clo)
 {
 
-//  std::vector<bd::OpacityKnot> trFunc;
-
   try {
     bd::OpacityTransferFunction trFunc{ clo.tfuncPath };
 
@@ -143,7 +145,7 @@ createRelMap(CommandLineOptions const &clo)
     }
 
     preproc::VoxelOpacityFunction<Ty> relFunc{ trFunc, clo.volMin, clo.volMax };
-//  bd::ValueRangeFunction<Ty> relFunc{ clo.blockThresholdMin, clo.blockThresholdMax };
+//  bd::ValueRangeFunction<Ty> relFunc{ clo.blockThreshold_Min, clo.blockThreshold_Max };
 
     bd::BufferedReader<Ty> r{ clo.bufferSize };
     if (!r.open(clo.inFile)) {
@@ -152,23 +154,34 @@ createRelMap(CommandLineOptions const &clo)
     }
     r.start();
 
+    // open the output rmap file.
     std::ofstream rmapfile{ clo.rmapFilePath };
     if (!rmapfile.is_open()) {
       bd::Err() << "Could not open " << clo.rmapFilePath;
       return -1;
     }
 
-//    size_t const bufSize{ r.singleBufferElements() * sizeof(Ty) };
+
+    // The relevance map is stored in pre-allocated vector.
+    // It is only as large as a single buffer from the reader
+    // and is flushed to disk after each buffer is analyzed.
     std::vector<double> relMap(r.singleBufferElements(), 0);
 
+
+    // Process all the buffers from the BufferedReader until the
+    // raw file has been completely traversed.
     while (r.hasNext()) {
 
       bd::Buffer<Ty> *b{ r.waitNext() };
 
+      // The voxel classifier uses the opacity function to write the
+      // opacity to the rmap.
       bd::ParallelForVoxelClassifier
           <Ty, preproc::VoxelOpacityFunction<Ty>, std::vector<double>>
           classifier{ relMap, b, relFunc };
 
+
+      // Process this buffer in parallel
       tbb::blocked_range<size_t> range{ 0, b->getNumElements() };
       tbb::parallel_for(range, classifier);
 
@@ -191,6 +204,8 @@ createRelMap(CommandLineOptions const &clo)
     return -1;
 
   }
+
+
   return 0;
 
 }
@@ -216,19 +231,19 @@ generateIndexFile(const CommandLineOptions &clo)
   collection.volume().max(clo.volMax);
 
 
-//  parallelCountBlockEmptyVoxels(clo, collection.volume(), collection.blocks());
+  parallelCountBlockEmptyVoxels(clo, collection.volume(), collection.blocks());
 
 
   // TODO: IndexFile generation
-//  std::unique_ptr<bd::IndexFile>
-//      indexFile{
-//          bd::IndexFile::fromBlockCollection<Ty>(clo.inFile,
-//                                                 collection,
-//                                                 bd::to_dataType(clo.dataType)) };
+  std::unique_ptr<bd::IndexFile>
+      indexFile{
+          bd::IndexFile::fromBlockCollection<Ty>(clo.inFile,
+                                                 collection,
+                                                 bd::to_dataType(clo.dataType)) };
 
 
   // TODO: Write IndexFile to disk.
-//  writeIndexFileToDisk(*(indexFile.get()), clo);
+  writeIndexFileToDisk(*(indexFile.get()), clo);
 
 }
 
