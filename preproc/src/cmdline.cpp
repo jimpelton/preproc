@@ -85,13 +85,17 @@ try
   std::vector<std::string> dataTypes{ "float", "ushort", "uchar" };
   TCLAP::ValuesConstraint<std::string> dataTypeAllowValues(dataTypes);
   TCLAP::ValueArg<std::string>
-      dataTypeArg("t", "type", "Data type (float, ushort, uchar).", false, "",
+      dataTypeArg("t", "type",
+                  "Data type (float, ushort, uchar).\n"
+                      "Default: uchar",
+                  false, "uchar",
                   &dataTypeAllowValues);
   cmd.add(dataTypeArg);
 
   // convert bin to ascii flag
-  TCLAP::SwitchArg readArg("c", "convert", "Read existing binary index file and "
-      "convert to ascii");
+  TCLAP::SwitchArg readArg("c", "convert",
+                           "Read existing binary index file and "
+                               "convert to ascii");
   cmd.add(readArg);
 
 
@@ -118,48 +122,80 @@ try
 
 
   // buffer size
-  const std::string sixty_four_megs = "64M";
-  TCLAP::ValueArg<std::string> bufferSizeArg
-      ("b", "buffer-size", "Buffer size bytes", false, sixty_four_megs, "uint");
+  std::string const sixty_four_megs = "64M";
+  TCLAP::ValueArg<std::string>
+      bufferSizeArg("b", "buffer-size",
+                    "Buffer size bytes. Format is a numeric value followed by "
+                        "K, M, or G.\n"
+                        "Values: [0-9]+[KMG].\n"
+                        " Default: 64M",
+                    false,
+                    sixty_four_megs, "uint");
   cmd.add(bufferSizeArg);
 
 
-  // block ratio of visibility threshold min/max
+  // block ratio of visibility threshold min
   TCLAP::ValueArg<float>
-      blockROV_Min_Arg("", "block-rov-min", "Block ratio-of-visibility min", true,
-                     std::numeric_limits<float>::lowest(), "float");
+      blockROV_Min_Arg("", "block-rov-min",
+                       "Block ratio-of-visibility min.\n"
+                           "Values: [MIN_FLOAT - MAX_FLOAT] < block-rov-max.\n"
+                           "Default: MIN_FLOAT",
+                       true,
+                       std::numeric_limits<float>::lowest(), "float");
   cmd.add(blockROV_Min_Arg);
 
+
+  // block ratio of visibility threshold max
   TCLAP::ValueArg<float>
-      blockROV_Max_Arg("", "block-rov-max", "Block ratio-of-visibility max", true,
-                     std::numeric_limits<float>::max(), "float");
+      blockROV_Max_Arg("", "block-rov-max",
+                       "Block ratio-of-visibility max.\n"
+                           "Values: [MIN_FLOAT - MAX_FLOAT] > block-rov-min.\n"
+                           "Default: MAX_FLOAT",
+                       true,
+                       std::numeric_limits<float>::max(), "float");
   cmd.add(blockROV_Max_Arg);
 
 
   // voxel opacity relevance threshold
   TCLAP::ValueArg<float>
-    voxelOpacityRelevance_Min_Arg("", "voxel-opacity-min", "Voxel opacity relevance minimum threshold", true,
-                                0.0, "float");
+    voxelOpacityRelevance_Min_Arg("", "voxel-opacity-min",
+                                  "Voxel opacity relevance minimum threshold.\n"
+                                      "Valid value: [0.0-1.0] < voxel-opacity-max.\n"
+                                      "Default: 0.0",
+                                  true,
+                                  0.0, "float");
   cmd.add(voxelOpacityRelevance_Min_Arg);
 
 
   // voxel opacity relevance threshold
   TCLAP::ValueArg<float>
-      voxelOpacityRelevance_Max_Arg("", "voxel-opacity-max", "Voxel opacity relevance maximum threshold", true,
-                                  1.0, "float");
+      voxelOpacityRelevance_Max_Arg("", "voxel-opacity-max",
+                                    "Voxel opacity relevance maximum threshold.\n"
+                                        "Valid value: [0.0-1.0] > voxel-opacity-min.\n"
+                                        "Default: 0.0",
+                                    true,
+                                    1.0, "float");
   cmd.add(voxelOpacityRelevance_Max_Arg);
 
 
   // volume minimum value
   TCLAP::ValueArg<double>
-      volMinArg("", "vol-min", "Volume min. Default is MIN_DOUBLE", false,
+      volMinArg("", "vol-min",
+                "Volume min value.\n"
+                    "Valid value: [MIN_DOUBLE - MAX_DOUBLE]\n"
+                    "Default: MIN_DOUBLE",
+                false,
                 std::numeric_limits<double>::lowest(), "double");
   cmd.add(volMinArg);
 
 
   // volume maximum value
   TCLAP::ValueArg<double>
-      volMaxArg("", "vol-max", "Volume max. Default is MAX_DOUBLE", false,
+      volMaxArg("", "vol-max",
+                "Volume max value.\n"
+                    "Valid value: [MIN_DOUBLE - MAX_DOUBLE]\n"
+                    "Default: MAX_DOUBLE",
+                false,
                 std::numeric_limits<double>::max(), "double");
   cmd.add(volMaxArg);
 
@@ -235,13 +271,20 @@ operator<<(std::ostream &os, const CommandLineOptions &opts)
 {
   os << "Action type: " << ( opts.actionType == ActionType::Convert ?
                              "Convert" : "Generate" )
-     << "\n" "Input file path: " << opts.inFile
-     << "\n" "Output file path: " << opts.outFilePath
-     << "\n" "Output file prefix: " << opts.outFilePrefix
-     << "\n" "RMap output file path: " << opts.rmapFilePath
-     << "\n" "Transfer function path: " << opts.tfuncPath
-     << "\n" "Dat file: " << opts.datFilePath
-     << "\n" "Data Type: " << opts.dataType
+     << "\n" "Input file path: "
+     << opts.inFile
+     << "\n" "Output file path: "
+     << opts.outFilePath
+     << "\n" "Output file prefix: "
+     << opts.outFilePrefix
+     << "\n" "RMap output file path: "
+     << opts.rmapFilePath
+     << "\n" "Transfer function path: "
+     << opts.tfuncPath
+     << "\n" "Dat file: "
+     << opts.datFilePath
+     << "\n" "Data Type: "
+     << opts.dataType
      << "\n" "Vol dims (w X h X d): "
      << opts.vol_dims[0] << " X "
      << opts.vol_dims[1] << " X "
@@ -250,12 +293,17 @@ operator<<(std::ostream &os, const CommandLineOptions &opts)
      << opts.num_blks[0] << " X "
      << opts.num_blks[1] << " X "
      << opts.num_blks[2]
-     << "\n" "Buffer Size: " << opts.bufferSize << " bytes."
-     << "\n" "Block ratio of vis. min/max: " << opts.blockThreshold_Min << " - "
+     << "\n" "Buffer Size: "
+     << opts.bufferSize << " bytes."
+     << "\n" "Block ratio of vis. min/max: "
+     << opts.blockThreshold_Min << " - "
      << opts.blockThreshold_Max
-     << "\n" "Voxel opacity rel. min/max: " << opts.voxelOpacityRel_Min << " - "
+     << "\n" "Voxel opacity rel. min/max: "
+     << opts.voxelOpacityRel_Min << " - "
      << opts.voxelOpacityRel_Max
-     << "\n" "Volume min/max : " << opts.volMin << " - " << opts.volMax
+     << "\n" "Volume min/max : "
+     << opts.volMin << " - "
+     << opts.volMax
      << "\n" "Print blocks: " << std::boolalpha
      << opts.printBlocks;
 

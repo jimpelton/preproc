@@ -7,11 +7,11 @@
 #include "cmdline.h"
 #include "voxelopacityfunction.h"
 
+#include <bd/volume/fileblockcollection.h>
 #include <bd/util/util.h>
 #include <bd/io/indexfile.h>
 #include <bd/log/logger.h>
 #include <bd/io/datfile.h>
-//#include <bd/filter/voxelopacityfilter.h>
 #include <bd/filter/valuerangefilter.h>
 #include <bd/tbb/parallelfor_voxelclassifier.h>
 #include <bd/volume/transferfunction.h>
@@ -75,54 +75,71 @@ writeIndexFileToDisk(bd::IndexFile const &indexFile, CommandLineOptions const &c
 
 }
 
+template <class Ty>
+void
+parallelBlockMinMax(CommandLineOptions const &clo,
+                    bd::Volume const &volume,
+                    bd::Buffer<Ty> const *buf,
+                    std::vector<bd::FileBlock> &blocks)
+{
+  bd::ParallelReduceBlockMinMax<Ty>
+    minMax{ &volume, buf };
+
+  tbb::blocked_range<size_t> range{ 0, buf->getNumElements() };
+  tbb::parallel_reduce(range, minMax);
+
+  bd::MinMaxPairDouble const *pairs{ minMax.pairs() };
+  for(size_t i{ 0 }; i < blocks.size(); ++i){
+    bd::FileBlock &b = blocks[i];
+
+    if (b.min_val > pairs[i].min){
+      b.min_val = pairs[i].min;
+    }
+
+    if(b.max_val < pairs[i].max){
+      b.max_val = pairs[i].max;
+    }
+
+    b.total_val += pairs[i].total;
+  }
+
+}
+
 
 /// \brief Use RMap to count the empty voxels in each block
 void
 parallelCountBlockEmptyVoxels(CommandLineOptions const &clo,
                               bd::Volume &volume,
+                              bd::Buffer<double> const *buf,
                               std::vector<bd::FileBlock> &blocks)
 {
-
-  bd::BufferedReader<double> r{ clo.bufferSize };
-  if (!r.open(clo.rmapFilePath)) {
-    throw std::runtime_error("Could not open file: " + clo.rmapFilePath);
-  }
-  r.start();
-
-
   // relevance function
   auto rfunc = [&](double x) -> bool
   {
     return x >= clo.voxelOpacityRel_Min && x <= clo.voxelOpacityRel_Max;
   };
 
+  bd::ParallelReduceBlockEmpties<double, decltype(rfunc)>
+      empties{ buf, &volume, rfunc };
+
+  tbb::blocked_range<size_t> range{ 0, buf->getNumElements() };
+  tbb::parallel_reduce(range, empties);
+
+  uint64_t const *emptyCounts{ empties.empties() };
+
   uint64_t totalEmpties{ 0 };
+  for (size_t i{ 0 }; i < blocks.size(); ++i) {
+    bd::FileBlock *b{ &blocks[i] };
 
-  while (r.hasNext()) {
-
-    bd::Buffer<double> *buf{ r.waitNext() };
-
-    bd::ParallelReduceBlockEmpties<double, decltype(rfunc)>
-        empties{ buf, &volume, rfunc };
-
-    tbb::blocked_range<size_t> range{ 0, buf->getNumElements() };
-    tbb::parallel_reduce(range, empties);
-
-    uint64_t const *emptyCounts{ empties.empties() };
-    for (size_t i{ 0 }; i < blocks.size(); ++i) {
-      blocks[i].empty_voxels += emptyCounts[i];
-      totalEmpties += emptyCounts[i];
-    }
-
-    r.waitReturn(buf);
+    b->empty_voxels += emptyCounts[i];
 
 
+    totalEmpties += emptyCounts[i];
   }
 
-  // TODO: compute block ratio of visibility
+  volume.numEmptyVoxels( volume.numEmptyVoxels() + totalEmpties );
 
-  //TODO: volume.totalempties(totalempties);
-  Info() << "Done counting empties. \n\t" << totalEmpties << " empty voxels found.";
+//  Info() << "Done counting empties. \n\t" << totalEmpties << " empty voxels found.";
 
 }
 
@@ -180,14 +197,11 @@ createRelMap(CommandLineOptions const &clo)
           <Ty, preproc::VoxelOpacityFunction<Ty>, std::vector<double>>
           classifier{ relMap, b, relFunc };
 
-
       // Process this buffer in parallel
       tbb::blocked_range<size_t> range{ 0, b->getNumElements() };
       tbb::parallel_for(range, classifier);
 
-
       r.waitReturn(b);
-
 
       // Write RMap for this buffer out to disk.
       rmapfile.write(reinterpret_cast<char *>(relMap.data()),
@@ -205,11 +219,36 @@ createRelMap(CommandLineOptions const &clo)
 
   }
 
-
   return 0;
 
 }
 
+template<class Ty>
+void
+doTheRestOfItAll(CommandLineOptions const & clo,
+                 bd::FileBlockCollection<Ty> & collection)
+{
+
+  bd::BufferedReader<double> r{ clo.bufferSize };
+  if (!r.open(clo.rmapFilePath)) {
+    throw std::runtime_error("Could not open file: " + clo.rmapFilePath);
+  }
+  r.start();
+
+
+  while (r.hasNext()) {
+    bd::Buffer<double> *buf{ r.waitNext() };
+    parallelCountBlockEmptyVoxels(clo, collection.volume(), buf, collection.blocks());
+    parallelBlockMinMax(clo, collection.volume(), buf, collection.blocks());
+    r.waitReturn(buf);
+  }
+
+  for (size_t i{ 0 }; i < collection.blocks().size(); ++i) {
+    bd::FileBlock &b = collection.blocks()[i];
+    uint64_t blockVox{ b.voxel_dims[0] * b.voxel_dims[1] * b.voxel_dims[2] };
+    b.rov = b.empty_voxels / (blockVox - b.empty_voxels);
+  }
+}
 
 /// \brief Generate the IndexFile!
 /// \throws std::runtime_error if rawfile can't be opened.
@@ -217,11 +256,10 @@ template<typename Ty>
 void
 generateIndexFile(const CommandLineOptions &clo)
 {
+
   createRelMap<Ty>(clo);
 
-
   // TODO: Octree decompostion of R-Map
-  // TODO: Block generation
 
   bd::FileBlockCollection<Ty>
       collection{{ clo.vol_dims[0], clo.vol_dims[1], clo.vol_dims[2] },
@@ -230,9 +268,7 @@ generateIndexFile(const CommandLineOptions &clo)
   collection.volume().min(clo.volMin);
   collection.volume().max(clo.volMax);
 
-
-  parallelCountBlockEmptyVoxels(clo, collection.volume(), collection.blocks());
-
+  doTheRestOfItAll(clo, collection);
 
   // TODO: IndexFile generation
   std::unique_ptr<bd::IndexFile>
