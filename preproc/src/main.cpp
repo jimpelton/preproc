@@ -6,6 +6,7 @@
 
 #include "cmdline.h"
 #include "voxelopacityfunction.h"
+#include "processrawfile.h"
 
 #include <bd/volume/fileblockcollection.h>
 #include <bd/util/util.h>
@@ -30,6 +31,7 @@ using bd::Info;
 
 namespace preproc
 {
+
 
 ////////////////////////////////////////////////////////////////////////////////
 std::string
@@ -75,35 +77,6 @@ writeIndexFileToDisk(bd::IndexFile const &indexFile, CommandLineOptions const &c
 
 }
 
-template <class Ty>
-void
-parallelBlockMinMax(CommandLineOptions const &clo,
-                    bd::Volume const &volume,
-                    bd::Buffer<Ty> const *buf,
-                    std::vector<bd::FileBlock> &blocks)
-{
-  bd::ParallelReduceBlockMinMax<Ty>
-    minMax{ &volume, buf };
-
-  tbb::blocked_range<size_t> range{ 0, buf->getNumElements() };
-  tbb::parallel_reduce(range, minMax);
-
-  bd::MinMaxPairDouble const *pairs{ minMax.pairs() };
-  for(size_t i{ 0 }; i < blocks.size(); ++i){
-    bd::FileBlock &b = blocks[i];
-
-    if (b.min_val > pairs[i].min){
-      b.min_val = pairs[i].min;
-    }
-
-    if(b.max_val < pairs[i].max){
-      b.max_val = pairs[i].max;
-    }
-
-    b.total_val += pairs[i].total;
-  }
-
-}
 
 
 /// \brief Use RMap to count the empty voxels in each block
@@ -127,13 +100,11 @@ parallelCountBlockEmptyVoxels(CommandLineOptions const &clo,
 
   uint64_t const *emptyCounts{ empties.empties() };
 
+  //Total the empty voxels for each block, and all the blocks.
   uint64_t totalEmpties{ 0 };
   for (size_t i{ 0 }; i < blocks.size(); ++i) {
     bd::FileBlock *b{ &blocks[i] };
-
     b->empty_voxels += emptyCounts[i];
-
-
     totalEmpties += emptyCounts[i];
   }
 
@@ -144,89 +115,14 @@ parallelCountBlockEmptyVoxels(CommandLineOptions const &clo,
 }
 
 
-/// \brief Create the relevance map in parallel based on the transfer function.
-/// \param clo The command line options
-/// \param tempOutFilePath Path that the temp RMap scratch file should be written to.
-/// \throws std::runtime_error If the raw file could not be opened.
-template<typename Ty>
-int
-createRelMap(CommandLineOptions const &clo)
-{
-
-  try {
-    bd::OpacityTransferFunction trFunc{ clo.tfuncPath };
-
-    if (trFunc.getNumKnots() == 0) {
-      bd::Err() << "Transfer function has size 0.";
-      return -1;
-    }
-
-    preproc::VoxelOpacityFunction<Ty> relFunc{ trFunc, clo.volMin, clo.volMax };
-//  bd::ValueRangeFunction<Ty> relFunc{ clo.blockThreshold_Min, clo.blockThreshold_Max };
-
-    bd::BufferedReader<Ty> r{ clo.bufferSize };
-    if (!r.open(clo.inFile)) {
-      bd::Err() << "Could not open file " + clo.inFile;
-      return -1;
-    }
-    r.start();
-
-    // open the output rmap file.
-    std::ofstream rmapfile{ clo.rmapFilePath };
-    if (!rmapfile.is_open()) {
-      bd::Err() << "Could not open " << clo.rmapFilePath;
-      return -1;
-    }
-
-
-    // The relevance map is stored in pre-allocated vector.
-    // It is only as large as a single buffer from the reader
-    // and is flushed to disk after each buffer is analyzed.
-    std::vector<double> relMap(r.singleBufferElements(), 0);
-
-
-    // Process all the buffers from the BufferedReader until the
-    // raw file has been completely traversed.
-    while (r.hasNext()) {
-
-      bd::Buffer<Ty> *b{ r.waitNext() };
-
-      // The voxel classifier uses the opacity function to write the
-      // opacity to the rmap.
-      bd::ParallelForVoxelClassifier
-          <Ty, preproc::VoxelOpacityFunction<Ty>, std::vector<double>>
-          classifier{ relMap, b, relFunc };
-
-      // Process this buffer in parallel
-      tbb::blocked_range<size_t> range{ 0, b->getNumElements() };
-      tbb::parallel_for(range, classifier);
-
-      r.waitReturn(b);
-
-      // Write RMap for this buffer out to disk.
-      rmapfile.write(reinterpret_cast<char *>(relMap.data()),
-                     b->getNumElements() * sizeof(double));
-
-    }
-
-    rmapfile.close();
-
-  }
-  catch (std::exception e) {
-
-    bd::Err() << e.what();
-    return -1;
-
-  }
-
-  return 0;
-
-}
-
+/// For each buffer in the RMap file, count the number of irrelevant voxels for each
+/// blocks, then compute
+/// \param clo
+/// \param collection
 template<class Ty>
 void
-doTheRestOfItAll(CommandLineOptions const & clo,
-                 bd::FileBlockCollection<Ty> & collection)
+processRelMap(CommandLineOptions const &clo,
+              bd::FileBlockCollection<Ty> &collection)
 {
 
   bd::BufferedReader<double> r{ clo.bufferSize };
@@ -236,17 +132,16 @@ doTheRestOfItAll(CommandLineOptions const & clo,
   r.start();
 
 
-  while (r.hasNext()) {
-    bd::Buffer<double> *buf{ r.waitNext() };
+  while (r.hasNextBuffer()) {
+    bd::Buffer<double> *buf{ r.waitNextFull() };
     parallelCountBlockEmptyVoxels(clo, collection.volume(), buf, collection.blocks());
-    parallelBlockMinMax(clo, collection.volume(), buf, collection.blocks());
-    r.waitReturn(buf);
+    r.waitReturnEmpty(buf);
   }
 
   for (size_t i{ 0 }; i < collection.blocks().size(); ++i) {
     bd::FileBlock &b = collection.blocks()[i];
     uint64_t blockVox{ b.voxel_dims[0] * b.voxel_dims[1] * b.voxel_dims[2] };
-    b.rov = b.empty_voxels / (blockVox - b.empty_voxels);
+    b.rov = double(blockVox - b.empty_voxels) / double(b.empty_voxels);
   }
 }
 
@@ -256,11 +151,6 @@ template<typename Ty>
 void
 generateIndexFile(const CommandLineOptions &clo)
 {
-
-  createRelMap<Ty>(clo);
-
-  // TODO: Octree decompostion of R-Map
-
   bd::FileBlockCollection<Ty>
       collection{{ clo.vol_dims[0], clo.vol_dims[1], clo.vol_dims[2] },
                  { clo.num_blks[0], clo.num_blks[1], clo.num_blks[2] }};
@@ -268,9 +158,11 @@ generateIndexFile(const CommandLineOptions &clo)
   collection.volume().min(clo.volMin);
   collection.volume().max(clo.volMax);
 
-  doTheRestOfItAll(clo, collection);
+  processRawFile<Ty>(clo, collection.volume(), collection.blocks());
+  processRelMap(clo, collection);
 
-  // TODO: IndexFile generation
+
+
   std::unique_ptr<bd::IndexFile>
       indexFile{
           bd::IndexFile::fromBlockCollection<Ty>(clo.inFile,
@@ -278,11 +170,9 @@ generateIndexFile(const CommandLineOptions &clo)
                                                  bd::to_dataType(clo.dataType)) };
 
 
-  // TODO: Write IndexFile to disk.
   writeIndexFileToDisk(*(indexFile.get()), clo);
 
 }
-
 
 /// \throws std::runtime_error if rawfile can't be opened.
 void
