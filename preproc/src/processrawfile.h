@@ -53,6 +53,8 @@ parallelBlockMinMax(bd::Volume const &volume,
     b.total_val += pairs[i].total;
   }
 
+
+
 } // parallelBlockMinMax
 
 template<class Ty>
@@ -138,7 +140,7 @@ processRawFile(CommandLineOptions const &clo,
     }
 
     // set up the VoxelOpacityFunction (may not actually be used, but it doesn't
-    // have a default c'tor).
+    // have a default c'tor, so, ya know can't default c'tor it).
     preproc::VoxelOpacityFunction<Ty> relFunc{ trFunc, clo.volMin, clo.volMax };
 
     r.start();
@@ -147,11 +149,11 @@ processRawFile(CommandLineOptions const &clo,
 
       bd::Buffer <Ty> *b{ r.waitNextFull() };
 
+      parallelBlockMinMax(volume, blocks, b);
+
       if (! skipRMap) {
         createRelMap(b, relFunc, relMapBuffer, rmapfile);
       }
-
-      parallelBlockMinMax(volume, blocks, b);
 
       r.waitReturnEmpty(b);
 

@@ -41,7 +41,7 @@ makeFileNameString(const CommandLineOptions &clo, const char *extension)
   outFileName << clo.outFilePath << '/' << clo.outFilePrefix
               << '_' << clo.num_blks[0] << '-' << clo.num_blks[1] << '-'
               << clo.num_blks[2]
-              << '_' << clo.blockThreshold_Min << '-' << clo.blockThreshold_Max
+              /*<< '_' << clo.blockThreshold_Min << '-' << clo.blockThreshold_Max*/
               << extension;
 
   return outFileName.str();
@@ -147,7 +147,7 @@ processRelMap(CommandLineOptions const &clo,
 
 /// \brief Generate the IndexFile!
 /// \throws std::runtime_error if rawfile can't be opened.
-template<typename Ty>
+template<class Ty>
 void
 generateIndexFile(const CommandLineOptions &clo)
 {
