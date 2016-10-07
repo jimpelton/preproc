@@ -158,10 +158,14 @@ generateIndexFile(const CommandLineOptions &clo)
   collection.volume().min(clo.volMin);
   collection.volume().max(clo.volMax);
 
-  processRawFile<Ty>(clo, collection.volume(), collection.blocks());
-  processRelMap(clo, collection);
+  processRawFile<Ty>(clo,
+                     collection.volume(),
+                     collection.blocks(),
+                     clo.skipRmapGeneration);
 
-
+  if (! clo.skipRmapGeneration) {
+    processRelMap(clo, collection);
+  }
 
   std::unique_ptr<bd::IndexFile>
       indexFile{
@@ -263,7 +267,9 @@ try
   using preproc::CommandLineOptions;
   CommandLineOptions clo;
 
-  if (parseThem(argc, argv, clo) == 0) {
+  int numArgs = parseThem(argc, argv, clo);
+  preproc::printThem(clo);
+  if (numArgs == 0) {
     Err() << "Command line parse error, exiting.";
     bd::logger::shutdown();
     return 1;

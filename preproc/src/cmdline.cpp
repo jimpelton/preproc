@@ -140,7 +140,7 @@ try
                        "Block ratio-of-visibility min.\n"
                            "Values: [MIN_FLOAT - MAX_FLOAT] < block-rov-max.\n"
                            "Default: MIN_FLOAT",
-                       true,
+                       false,
                        std::numeric_limits<float>::lowest(), "float");
   cmd.add(blockROV_Min_Arg);
 
@@ -151,7 +151,7 @@ try
                        "Block ratio-of-visibility max.\n"
                            "Values: [MIN_FLOAT - MAX_FLOAT] > block-rov-min.\n"
                            "Default: MAX_FLOAT",
-                       true,
+                       false,
                        std::numeric_limits<float>::max(), "float");
   cmd.add(blockROV_Max_Arg);
 
@@ -162,7 +162,7 @@ try
                                   "Voxel opacity relevance minimum threshold.\n"
                                       "Valid value: [0.0-1.0] < voxel-opacity-max.\n"
                                       "Default: 0.0",
-                                  true,
+                                  false,
                                   0.0, "float");
   cmd.add(voxelOpacityRelevance_Min_Arg);
 
@@ -173,7 +173,7 @@ try
                                     "Voxel opacity relevance maximum threshold.\n"
                                         "Valid value: [0.0-1.0] > voxel-opacity-min.\n"
                                         "Default: 0.0",
-                                    true,
+                                    false,
                                     1.0, "float");
   cmd.add(voxelOpacityRelevance_Max_Arg);
 
@@ -204,6 +204,10 @@ try
   TCLAP::SwitchArg
       printBlocksArg("", "print-blocks", "Print blocks into to stdout.", cmd, false);
 
+  // skip rmap args
+  TCLAP::SwitchArg
+    skipRmapArg("", "skip-rmap", "Skip relevance mapping", cmd, false);
+
   cmd.parse(argc, argv);
 
   opts.actionType = readArg.getValue() ? ActionType::Convert : ActionType::Generate;
@@ -215,6 +219,7 @@ try
   opts.datFilePath = datFileArg.getValue();
   opts.dataType = dataTypeArg.getValue();
   opts.printBlocks = printBlocksArg.getValue();
+  opts.skipRmapGeneration = skipRmapArg.getValue();
   opts.vol_dims[0] = xdimArg.getValue();
   opts.vol_dims[1] = ydimArg.getValue();
   opts.vol_dims[2] = zdimArg.getValue();

@@ -38,6 +38,8 @@ struct CommandLineOptions
   ActionType actionType;
   // true if block data should be dumped to file
   bool printBlocks;
+  // true if a simple index file should be created (no relevance mapping)
+  bool skipRmapGeneration;
   // number of blocks
   uint64_t num_blks[3];
   // volume dimensions

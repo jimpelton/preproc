@@ -93,18 +93,20 @@ template<class Ty>
 int
 processRawFile(CommandLineOptions const &clo,
                bd::Volume const &volume,
-               std::vector<bd::FileBlock> &blocks)
+               std::vector<bd::FileBlock> &blocks,
+               bool skipRMap)
 {
 
   try {
-    // Generate the transfer function and set up
-    // the VoxelOpacityFunction
-    bd::OpacityTransferFunction trFunc{ clo.tfuncPath };
-    if (trFunc.getNumKnots() == 0) {
-      bd::Err() << "Transfer function has size 0.";
-      return -1;
-    }
-    preproc::VoxelOpacityFunction<Ty> relFunc{ trFunc, clo.volMin, clo.volMax };
+
+
+    std::ofstream rmapfile;
+    bd::OpacityTransferFunction trFunc{ };
+
+    // The relevance map is stored in pre-allocated vector.
+    // It is only as large as a single buffer from the reader
+    // and is flushed to disk after each buffer is analyzed.
+    std::vector<double> relMapBuffer;
 
     // Open the raw file in a BufferedReader.
     bd::BufferedReader<Ty> r{ clo.bufferSize };
@@ -112,25 +114,43 @@ processRawFile(CommandLineOptions const &clo,
       bd::Err() << "Could not open file " + clo.inFile;
       return -1;
     }
-    r.start();
 
-    // Open the output rmap file.
-    std::ofstream rmapfile{ clo.rmapFilePath };
-    if (!rmapfile.is_open()) {
-      bd::Err() << "Could not open rmap output file: " << clo.rmapFilePath;
-      return -1;
+    // If we are doing relevance mapping, then open rmap output file,
+    // load the relevance transfer function,
+    // reserve space in the relevance map buffer.
+    if (! skipRMap) {
+
+      rmapfile.open(clo.rmapFilePath);
+      if (!rmapfile.is_open()) {
+        bd::Err() << "Could not open rmap output file: " << clo.rmapFilePath;
+        return -1;
+      }
+
+      // Generate the transfer function
+      trFunc.load(clo.tfuncPath);
+      if (trFunc.getNumKnots() == 0) {
+        bd::Err() << "Transfer function has size 0.";
+        return -1;
+      }
+
+      relMapBuffer.resize(r.singleBufferElements(), 0);
+
     }
 
-    // The relevance map is stored in pre-allocated vector.
-    // It is only as large as a single buffer from the reader
-    // and is flushed to disk after each buffer is analyzed.
-    std::vector<double> relMapBuffer(r.singleBufferElements(), 0);
+    // set up the VoxelOpacityFunction (may not actually be used, but it doesn't
+    // have a default c'tor).
+    preproc::VoxelOpacityFunction<Ty> relFunc{ trFunc, clo.volMin, clo.volMax };
+
+    r.start();
 
     while (r.hasNextBuffer()) {
 
       bd::Buffer <Ty> *b{ r.waitNextFull() };
 
-      createRelMap(b, relFunc, relMapBuffer, rmapfile);
+      if (! skipRMap) {
+        createRelMap(b, relFunc, relMapBuffer, rmapfile);
+      }
+
       parallelBlockMinMax(volume, blocks, b);
 
       r.waitReturnEmpty(b);
@@ -138,6 +158,7 @@ processRawFile(CommandLineOptions const &clo,
     }
 
     rmapfile.close();
+
   }
   catch (std::exception e) {
     bd::Err() << e.what();
