@@ -86,17 +86,23 @@ parallelCountBlockEmptyVoxels(CommandLineOptions const &clo,
                               bd::Buffer<double> const *buf,
                               std::vector<bd::FileBlock> &blocks)
 {
-  // relevance function
-  auto rfunc = [&](double x) -> bool
+  // if the relevance value from the rmap is in
+  // [voxelOpacityRel_Min .. voxelOpacityRel_Max] then it is relevant.
+  auto relevanceFunction = [&](double x) -> bool
   {
     return x >= clo.voxelOpacityRel_Min && x <= clo.voxelOpacityRel_Max;
   };
 
-  bd::ParallelReduceBlockEmpties<double, decltype(rfunc)>
-      empties{ buf, &volume, rfunc };
 
+  // parallel_reduce body
+  bd::ParallelReduceBlockEmpties<double, decltype(relevanceFunction)>
+      empties{ buf, &volume, relevanceFunction };
+
+
+  // count the voxels in parallel
   tbb::blocked_range<size_t> range{ 0, buf->getNumElements() };
   tbb::parallel_reduce(range, empties);
+
 
   uint64_t const *emptyCounts{ empties.empties() };
 
@@ -138,10 +144,24 @@ processRelMap(CommandLineOptions const &clo,
     r.waitReturnEmpty(buf);
   }
 
+  // compute the block ratio-of-visibility
   for (size_t i{ 0 }; i < collection.blocks().size(); ++i) {
     bd::FileBlock &b = collection.blocks()[i];
-    uint64_t blockVox{ b.voxel_dims[0] * b.voxel_dims[1] * b.voxel_dims[2] };
-    b.rov = double(blockVox - b.empty_voxels) / double(b.empty_voxels);
+//    if (b.empty_voxels == 0) {
+//      b.rov = 1.0;
+//    } else {
+      uint64_t totalvox{ b.voxel_dims[0] * b.voxel_dims[1] * b.voxel_dims[2] };
+      uint64_t nonempty{ totalvox - b.empty_voxels};
+      b.rov = nonempty / double(totalvox); //double(b.empty_voxels);
+//    }
+
+  }
+
+  // mark blocks as empty or non-empty
+  for (auto &b : collection.blocks()) {
+    if (b.rov <= clo.blockThreshold_Min || b.rov >= clo.blockThreshold_Max) {
+      b.is_empty = 1;
+    }
   }
 }
 

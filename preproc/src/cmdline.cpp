@@ -128,7 +128,7 @@ try
                     "Buffer size bytes. Format is a numeric value followed by "
                         "K, M, or G.\n"
                         "Values: [0-9]+[KMG].\n"
-                        " Default: 64M",
+                        "Default: 64M",
                     false,
                     sixty_four_megs, "uint");
   cmd.add(bufferSizeArg);
