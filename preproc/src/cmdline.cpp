@@ -147,7 +147,8 @@ try
 
   // block ratio of visibility threshold max
   TCLAP::ValueArg<float>
-      blockROV_Max_Arg("", "block-rov-max",
+      blockROV_Max_Arg("",
+                       "block-rov-max",
                        "Block ratio-of-visibility max.\n"
                            "Values: [MIN_FLOAT - MAX_FLOAT] > block-rov-min.\n"
                            "Default: MAX_FLOAT",
@@ -158,7 +159,8 @@ try
 
   // voxel opacity relevance threshold
   TCLAP::ValueArg<float>
-    voxelOpacityRelevance_Min_Arg("", "voxel-opacity-min",
+    voxelOpacityRelevance_Min_Arg("",
+                                  "voxel-opacity-min",
                                   "Voxel opacity relevance minimum threshold.\n"
                                       "Valid value: [0.0-1.0] < voxel-opacity-max.\n"
                                       "Default: 0.0",
@@ -169,7 +171,8 @@ try
 
   // voxel opacity relevance threshold
   TCLAP::ValueArg<float>
-      voxelOpacityRelevance_Max_Arg("", "voxel-opacity-max",
+      voxelOpacityRelevance_Max_Arg("",
+                                    "voxel-opacity-max",
                                     "Voxel opacity relevance maximum threshold.\n"
                                         "Valid value: [0.0-1.0] > voxel-opacity-min.\n"
                                         "Default: 0.0",
