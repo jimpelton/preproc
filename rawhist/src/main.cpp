@@ -49,9 +49,9 @@ void volumeMinMax(std::string const &path, size_t szbuf, float* volMin, float* v
   Ty max{ 0 };
   Ty min{ 0 };
   bd::Info() << "Begin min/max computation.";
-  while (r.hasNext()) {
+  while (r.hasNextBuffer()) {
     bd::Dbg() << "Waiting for full buffer";
-    bd::Buffer<Ty> *buf = r.waitNext();
+    bd::Buffer<Ty> *buf = r.waitNextFull();
     bd::Dbg() << "Got a full buffer: " << buf->getNumElements();
 
     tbb::blocked_range<size_t> range(0, buf->getNumElements());
@@ -63,7 +63,7 @@ void volumeMinMax(std::string const &path, size_t szbuf, float* volMin, float* v
     if (min > mm.min_value)
       min = mm.min_value;
 
-    r.waitReturn(buf);
+    r.waitReturnEmpty(buf);
   }
 
   bd::Info() << "Finished min/max computation.";
@@ -85,9 +85,9 @@ void hist(std::string const &fileName, size_t szbuf, float rawmin, float rawmax)
 
   bd::Info() << "Begin volume histogram computation.";
 
-  while (r.hasNext()) {
+  while (r.hasNextBuffer()) {
     bd::Dbg() << "Waiting for full buffer";
-    bd::Buffer<Ty> *buf = r.waitNext();
+    bd::Buffer<Ty> *buf = r.waitNextFull();
     bd::Dbg() << "Got a full buffer: " << buf->getNumElements();
 
     tbb::blocked_range<size_t> range(0, buf->getNumElements());
@@ -106,7 +106,7 @@ void hist(std::string const &fileName, size_t szbuf, float rawmin, float rawmax)
     }
     totalcount += histo.getTotalCount();
 
-    r.waitReturn(buf);
+    r.waitReturnEmpty(buf);
   }
 
   bd::Info() << "Finished volume histogram computation.";
