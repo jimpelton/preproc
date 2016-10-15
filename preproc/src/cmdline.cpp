@@ -71,31 +71,40 @@ try
 
 
   // transfer function file
-  TCLAP::ValueArg<std::string>
-      tfuncArg("u", "tfunc", "Path to transfer function file.", false, "", "string");
+  TCLAP::ValueArg<std::string> tfuncArg("u",
+                                        "tfunc",
+                                        "Path to transfer function file.",
+                                        false,
+                                        "",
+                                        "string");
   cmd.add(tfuncArg);
 
 
   // .dat file
-  TCLAP::ValueArg<std::string>
-      datFileArg("d", "dat-file", "Path to .dat file", false, "", "string");
+  TCLAP::ValueArg<std::string> datFileArg("d",
+                                          "dat-file",
+                                          "Path to .dat file",
+                                          false,
+                                          "",
+                                          "string");
   cmd.add(datFileArg);
 
   // volume data type
   std::vector<std::string> dataTypes{ "float", "ushort", "uchar" };
   TCLAP::ValuesConstraint<std::string> dataTypeAllowValues(dataTypes);
-  TCLAP::ValueArg<std::string>
-      dataTypeArg("t", "type",
-                  "Data type (float, ushort, uchar).\n"
-                      "Default: uchar",
-                  false, "uchar",
-                  &dataTypeAllowValues);
+  TCLAP::ValueArg<std::string> dataTypeArg("t",
+                                           "type",
+                                           "Data type of raw volume data set.\n"
+                                               "Default: uchar",
+                                           false,
+                                           "uchar",
+                                           &dataTypeAllowValues);
   cmd.add(dataTypeArg);
 
   // convert bin to ascii flag
-  TCLAP::SwitchArg readArg("c", "convert",
-                           "Read existing binary index file and "
-                               "convert to ascii");
+  TCLAP::SwitchArg readArg("c",
+                           "convert",
+                           "Read existing binary index file and convert to ascii");
   cmd.add(readArg);
 
 
@@ -111,13 +120,31 @@ try
 
 
   // num blocks
-  TCLAP::ValueArg<size_t> xBlocksArg("", "nbx", "Num blocks x dim", false, 1, "uint");
+  TCLAP::ValueArg<size_t> xBlocksArg("",
+                                     "nbx",
+                                     "Num blocks x dim\n"
+                                         "Default: 1",
+                                     false,
+                                     1,
+                                     "uint");
   cmd.add(xBlocksArg);
 
-  TCLAP::ValueArg<size_t> yBlocksArg("", "nby", "Num blocks y dim", false, 1, "uint");
+  TCLAP::ValueArg<size_t> yBlocksArg("",
+                                     "nby",
+                                     "Num blocks y dim\n"
+                                         "Default: 1",
+                                     false,
+                                     1,
+                                     "uint");
   cmd.add(yBlocksArg);
 
-  TCLAP::ValueArg<size_t> zBlocksArg("", "nbz", "Num blocks z dim", false, 1, "uint");
+  TCLAP::ValueArg<size_t> zBlocksArg("",
+                                     "nbz",
+                                     "Num blocks z dim\n"
+                                         "Default: 1",
+                                     false,
+                                     1,
+                                     "uint");
   cmd.add(zBlocksArg);
 
 
@@ -125,7 +152,7 @@ try
   std::string const sixty_four_megs = "64M";
   TCLAP::ValueArg<std::string>
       bufferSizeArg("b", "buffer-size",
-                    "Buffer size bytes. Format is a numeric value followed by "
+                    "Buffer size bytes. Format is a numeric value followed by   "
                         "K, M, or G.\n"
                         "Values: [0-9]+[KMG].\n"
                         "Default: 64M",
