@@ -213,8 +213,8 @@ try
       volMinArg("", "vol-min",
                 "Volume min value.\n"
                     "Valid value: [MIN_DOUBLE - MAX_DOUBLE]\n"
-                    "Default: MIN_DOUBLE",
-                false,
+                    "Required",
+                true,
                 std::numeric_limits<double>::lowest(), "double");
   cmd.add(volMinArg);
 
@@ -224,8 +224,8 @@ try
       volMaxArg("", "vol-max",
                 "Volume max value.\n"
                     "Valid value: [MIN_DOUBLE - MAX_DOUBLE]\n"
-                    "Default: MAX_DOUBLE",
-                false,
+                    "Required",
+                true,
                 std::numeric_limits<double>::max(), "double");
   cmd.add(volMaxArg);
 

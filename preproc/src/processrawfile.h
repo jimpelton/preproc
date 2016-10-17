@@ -35,9 +35,9 @@ parallelBlockMinMax(bd::Volume const &volume,
                     bd::Buffer<Ty> const *buf)
 {
   bd::ParallelReduceBlockMinMax<Ty> minMax{ &volume, buf };
+
   tbb::blocked_range<size_t> range{ 0, buf->getNumElements() };
   tbb::parallel_reduce(range, minMax);
-
   bd::MinMaxPairDouble const *pairs{ minMax.pairs() };
   for(size_t i{ 0 }; i < blocks.size(); ++i){
     bd::FileBlock &b = blocks[i];
@@ -137,14 +137,14 @@ processRawFile(CommandLineOptions const &clo,
 
       relMapBuffer.resize(r.singleBufferElements(), 0);
 
-    }
+    } // if(! skipRMap)
 
     // set up the VoxelOpacityFunction (may not actually be used, but it doesn't
     // have a default c'tor, so, ya know can't default c'tor it).
     preproc::VoxelOpacityFunction<Ty> relFunc{ trFunc, clo.volMin, clo.volMax };
 
-    r.start();
 
+    r.start();
     while (r.hasNextBuffer()) {
 
       bd::Buffer <Ty> *b{ r.waitNextFull() };
@@ -157,10 +157,9 @@ processRawFile(CommandLineOptions const &clo,
 
       r.waitReturnEmpty(b);
 
-    }
+    } // while
 
     rmapfile.close();
-
   }
   catch (std::exception e) {
     bd::Err() << e.what();
