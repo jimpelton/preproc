@@ -28,6 +28,10 @@ namespace preproc
 {
 
 
+/// Find block min/maxes for blocks that have voxels in \c buf.
+/// \param volume
+/// \param blocks A list of blocks to
+/// \param buf
 template <class Ty>
 void
 parallelBlockMinMax(bd::Volume const &volume,

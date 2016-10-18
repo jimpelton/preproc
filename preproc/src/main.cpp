@@ -91,7 +91,7 @@ generateIndexFile(const CommandLineOptions &clo)
   bd::FileBlockCollection<Ty>
       collection{{ clo.vol_dims[0], clo.vol_dims[1], clo.vol_dims[2] },
                  { clo.num_blks[0], clo.num_blks[1], clo.num_blks[2] }};
-
+  collection.initBlocks();
   collection.volume().min(clo.volMin);
   collection.volume().max(clo.volMax);
 
@@ -168,8 +168,7 @@ convert(CommandLineOptions &clo)
 {
 
   std::unique_ptr<bd::IndexFile> index{
-      bd::IndexFile::fromBinaryIndexFile(clo.inFile)
-  };
+      bd::IndexFile::fromBinaryIndexFile(clo.inFile) };
 
   if (clo.printBlocks) {
 
