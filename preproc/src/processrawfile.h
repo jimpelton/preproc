@@ -43,7 +43,7 @@ parallelBlockMinMax(bd::Volume const &volume,
   tbb::blocked_range<size_t> range{ 0, buf->getNumElements() };
   tbb::parallel_reduce(range, minMax);
   bd::MinMaxPairDouble const *pairs{ minMax.pairs() };
-  for(size_t i{ 0 }; i < blocks.size(); ++i){
+  for (size_t i{ 0 }; i < blocks.size(); ++i) {
     bd::FileBlock &b = blocks[i];
 
     if (b.min_val > pairs[i].min){
@@ -56,8 +56,6 @@ parallelBlockMinMax(bd::Volume const &volume,
 
     b.total_val += pairs[i].total;
   }
-
-
 
 } // parallelBlockMinMax
 
@@ -148,10 +146,9 @@ processRawFile(CommandLineOptions const &clo,
     preproc::VoxelOpacityFunction<Ty> relFunc{ trFunc, clo.volMin, clo.volMax };
 
 
+    bd::Buffer<Ty> *b{ nullptr };
     r.start();
-    while (r.hasNextBuffer()) {
-
-      bd::Buffer <Ty> *b{ r.waitNextFull() };
+    while ((b = r.waitNextFullUntilNone()) != nullptr) {
 
       parallelBlockMinMax(volume, blocks, b);
 

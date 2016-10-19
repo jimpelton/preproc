@@ -3,6 +3,8 @@
 //
 
 #include "processrelmap.h"
+#include <bd/tbb/parallelreduce_blockempties.h>
+#include <bd/tbb/parallelreduce_blockrov.h>
 
 namespace preproc
 {
@@ -29,9 +31,9 @@ parallelCountBlockEmptyVoxels(CommandLineOptions const &clo,
   tbb::blocked_range <size_t> range{ 0, buf->getNumElements() };
   tbb::parallel_reduce(range, empties);
 
-  uint64_t const *emptyCounts{ empties.empties() };
 
-  //Total the empty voxels for each block, and all the blocks.
+  // Total the empty voxels for each block, and all the blocks.
+  uint64_t const *emptyCounts{ empties.empties() };
   uint64_t totalEmpties{ 0 };
   for (size_t i{ 0 }; i < blocks.size(); ++i) {
     bd::FileBlock *b{ &blocks[i] };
@@ -41,8 +43,25 @@ parallelCountBlockEmptyVoxels(CommandLineOptions const &clo,
 
   volume.numEmptyVoxels(volume.numEmptyVoxels() + totalEmpties);
 
-//  Info() << "Done counting empties. \n\t" << totalEmpties << " empty voxels found.";
+} // parallelCountBlockEmptyVoxels()
 
-}
+void
+parallelSumBlockVisibilities(CommandLineOptions const &clo,
+                             bd::Volume &volume,
+                             bd::Buffer<double> const *buf,
+                             std::vector <bd::FileBlock> &blocks)
+{
+
+  bd::ParallelReduceBlockRov rov{ buf, &volume };
+  tbb::blocked_range<size_t> range{ 0, buf->getNumElements() };
+  tbb::parallel_reduce(range, rov);
+
+  double const *vis{ rov.visibilities() };
+  for (size_t i{ 0 }; i < blocks.size(); ++i) {
+    bd::FileBlock *b{ &blocks[i] };
+    b->rov += vis[i];
+  }
+
+} // parallelSumBlockVisibilities
 
 } // namespace preproc
