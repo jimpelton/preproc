@@ -48,14 +48,16 @@ void volumeMinMax(std::string const &path, size_t szbuf, float* volMin, float* v
   r.start();
   Ty max{ 0 };
   Ty min{ 0 };
+
   bd::Info() << "Begin min/max computation.";
-  while (r.hasNextBuffer()) {
-    bd::Dbg() << "Waiting for full buffer";
-    bd::Buffer<Ty> *buf = r.waitNextFull();
-    bd::Dbg() << "Got a full buffer: " << buf->getNumElements();
+
+  bd::Buffer<Ty> *buf{ nullptr };
+
+  while ((buf = r.waitNextFullUntilNone()) != nullptr) {
 
     tbb::blocked_range<size_t> range(0, buf->getNumElements());
     bd::ParallelReduceMinMax<Ty> mm(buf);
+
     tbb::parallel_reduce(range, mm);
 
     if (max < mm.max_value)
@@ -75,24 +77,26 @@ void volumeMinMax(std::string const &path, size_t szbuf, float* volMin, float* v
 template<typename Ty>
 void hist(std::string const &fileName, size_t szbuf, float rawmin, float rawmax)
 {
+
   bd::BufferedReader<Ty> r(szbuf);
   if (! r.open(fileName)) {
     bd::Err() << "File " << fileName << " was not opened.";
     return;
   }
-  bd::Dbg() << "Opened file: " << fileName;
   r.start();
+
 
   bd::Info() << "Begin volume histogram computation.";
 
-  while (r.hasNextBuffer()) {
-    bd::Dbg() << "Waiting for full buffer";
-    bd::Buffer<Ty> *buf = r.waitNextFull();
-    bd::Dbg() << "Got a full buffer: " << buf->getNumElements();
+
+  bd::Buffer<Ty> *buf{ nullptr };
+  while ((buf = r.waitNextFullUntilNone()) != nullptr) {
+
 
     tbb::blocked_range<size_t> range(0, buf->getNumElements());
     bd::ParallelReduceHistogram<Ty> histo(buf, rawmin, rawmax);
     tbb::parallel_reduce(range, histo);
+
 
     // Accumulate this buffer's histo
     for(size_t i{ 0 }; i < 1536; ++i) {
@@ -104,10 +108,13 @@ void hist(std::string const &fileName, size_t szbuf, float rawmin, float rawmax)
       if (histo.getHistMax()[i] > histmax[i])
         histmax[i] = histo.getHistMax()[i];
     }
+
+
     totalcount += histo.getTotalCount();
 
     r.waitReturnEmpty(buf);
-  }
+
+  } // while
 
   bd::Info() << "Finished volume histogram computation.";
 }
@@ -201,16 +208,22 @@ generate(CommandLineOptions &clo)
 int main(int argc, const char *argv[])
 {
   rawhist::CommandLineOptions clo;
+
   if (rawhist::parseThem(argc, argv, clo) == 0) {
+
     std::cerr << "No arguments provided.\nPlease use -h for usage info."
               << std::endl;
     return 1;
+
   }
 
+
   if(! clo.datFilePath.empty()) {
+
     bd::DatFileData dat;
     bd::parseDat(clo.datFilePath, dat);
     clo.dataType = bd::to_string(dat.dataType);
+
   }
 
 
