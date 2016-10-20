@@ -61,11 +61,11 @@ processRelMap(CommandLineOptions const &clo,
 
 
   // compute the block ratio-of-visibility
-  for (auto &b : collection.blocks()) {
-    uint64_t totalvox{ b.voxel_dims[0] * b.voxel_dims[1] * b.voxel_dims[2] };
-    assert(totalvox > 0);
-    b.rov /= double(totalvox); //double(b.empty_voxels);
-  }
+//  for (auto &b : collection.blocks()) {
+//    uint64_t totalvox{ b.voxel_dims[0] * b.voxel_dims[1] * b.voxel_dims[2] };
+//    assert(totalvox > 0);
+//    b.rov /= double(totalvox); //double(b.empty_voxels);
+//  }
 
   // mark blocks as empty or non-empty by computing the ratio of visibility.
   for (auto &b : collection.blocks()) {
