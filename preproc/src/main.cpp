@@ -54,7 +54,7 @@ void
 printBlocksToStdOut(bd::IndexFile const &indexFile)
 {
   std::cout << "{\n";
-  for (auto &block : indexFile.getBlocks()) {
+  for (auto &block : indexFile.getFileBlocks()) {
     std::cout << block << std::endl;
   }
   std::cout << "}\n";
@@ -91,6 +91,7 @@ generateIndexFile(const CommandLineOptions &clo)
   bd::FileBlockCollection<Ty>
       collection{{ clo.vol_dims[0], clo.vol_dims[1], clo.vol_dims[2] },
                  { clo.num_blks[0], clo.num_blks[1], clo.num_blks[2] }};
+
   collection.initBlocks();
   collection.volume().min(clo.volMin);
   collection.volume().max(clo.volMax);
