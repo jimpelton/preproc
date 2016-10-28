@@ -162,8 +162,8 @@ processRawFile(CommandLineOptions const &clo,
 
     rmapfile.close();
   }
-  catch (std::exception e) {
-    bd::Err() << e.what();
+  catch (std::runtime_error &e) {
+    bd::Err() << "Exception in " << __func__ << ": " << e.what();
     return -1;
   }
 

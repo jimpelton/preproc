@@ -215,13 +215,7 @@ try
   switch (clo.actionType) {
 
     case preproc::ActionType::Generate:
-
-      try {
         preproc::generate(clo);
-      }
-      catch (std::exception e) {
-        Err() << e.what();
-      }
       break;
 
     case preproc::ActionType::Convert:
@@ -238,7 +232,7 @@ try
 
   return 0;
 
-} catch (std::exception e) {
+} catch (std::exception &e) {
 
   Err() << "Caught exception in main: " << e.what();
   bd::logger::shutdown();
