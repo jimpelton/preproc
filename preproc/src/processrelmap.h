@@ -11,7 +11,7 @@
 #include <bd/io/bufferedreader.h>
 #include <bd/io/buffer.h>
 #include <bd/io/fileblock.h>
-#include <bd/volume/fileblockcollection.h>
+#include <bd/io/fileblockcollection.h>
 
 #include <vector>
 

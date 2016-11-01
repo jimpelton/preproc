@@ -9,7 +9,7 @@
 #include "processrawfile.h"
 #include "processrelmap.h"
 
-#include <bd/volume/fileblockcollection.h>
+#include <bd/io/fileblockcollection.h>
 #include <bd/util/util.h>
 #include <bd/io/indexfile.h>
 #include <bd/log/logger.h>
