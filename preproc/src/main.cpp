@@ -5,18 +5,14 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "cmdline.h"
-#include "voxelopacityfunction.h"
+#include "volumeminmax.h"
 #include "processrawfile.h"
 #include "processrelmap.h"
 
-//#include <bd/io/fileblockcollection.h>
 #include <bd/util/util.h>
 #include <bd/io/indexfile.h>
 #include <bd/log/logger.h>
 #include <bd/io/datfile.h>
-#include <bd/filter/valuerangefilter.h>
-#include <bd/tbb/parallelfor_voxelclassifier.h>
-#include <bd/volume/transferfunction.h>
 
 #include <tbb/tbb.h>
 
@@ -40,10 +36,10 @@ makeFileNameString(const CommandLineOptions &clo, const char *extension)
 {
   std::stringstream outFileName;
   outFileName << clo.outFilePath << '/' << clo.outFilePrefix
-              << '_' << clo.num_blks[0] << '-' << clo.num_blks[1] << '-'
-              << clo.num_blks[2]
-              /*<< '_' << clo.blockThreshold_Min << '-' << clo.blockThreshold_Max*/
-              << extension;
+    << '_' << clo.num_blks[0] << '-' << clo.num_blks[1] << '-'
+    << clo.num_blks[2]
+    /*<< '_' << clo.blockThreshold_Min << '-' << clo.blockThreshold_Max*/
+    << extension;
 
   return outFileName.str();
 }
@@ -79,39 +75,41 @@ writeIndexFileToDisk(bd::IndexFile const &indexFile, CommandLineOptions const &c
 }
 
 
-
-
-
 /// \brief Generate the IndexFile!
 /// \throws std::runtime_error if rawfile can't be opened.
 template<class Ty>
 void
-generateIndexFile(const CommandLineOptions &clo)
+generateIndexFile(const CommandLineOptions &clo, bd::DataType type)
 {
-  bd::FileBlockCollection<Ty>
-      collection{{ clo.vol_dims[0], clo.vol_dims[1], clo.vol_dims[2] },
-                 { clo.num_blks[0], clo.num_blks[1], clo.num_blks[2] }};
+//  bd::FileBlockCollection<Ty>
+//      collection{{ clo.vol_dims[0], clo.vol_dims[1], clo.vol_dims[2] },
+//                 { clo.num_blks[0], clo.num_blks[1], clo.num_blks[2] }};
 
-  std::unique_ptr<bd::IndexFile>
-    indexFile{
-    bd::IndexFile::fromBlockCollection<Ty>(clo.inFile,
-    collection,
-    bd::to_dataType(clo.dataType)) };
+  bd::Info() << "Computing volume min/max.";
+  double vMin, vMax;
+  volumeMinMax<Ty>(clo.inFile, clo.bufferSize, &vMin, &vMax);
 
-  collection.initBlocks();
-  collection.volume().min(clo.volMin);
-  collection.volume().max(clo.volMax);
+  std::unique_ptr<bd::IndexFile> indexFile{};
+  indexFile->getVolume().min(vMin);
+  indexFile->getVolume().max(vMax);
+  indexFile->getVolume().voxelDims({ clo.vol_dims[0], clo.vol_dims[1], clo.vol_dims[2] });
+  indexFile->getVolume().block_count({ clo.num_blks[0], clo.num_blks[1], clo.num_blks[2] });
 
+
+  bd::Info() << "Processing raw file.";
   processRawFile<Ty>(clo,
-                     collection.volume(),
-                     collection.blocks(),
+                     indexFile->getVolume(),
+                     indexFile->getFileBlocks(),
                      clo.skipRmapGeneration);
 
-  if (! clo.skipRmapGeneration) {
-    processRelMap(clo, collection);
+  
+  
+  if (!clo.skipRmapGeneration) {
+    bd::Info() << "Processing relevance map.";
+    processRelMap(clo,
+                  indexFile->getVolume(), 
+                  indexFile->getFileBlocks());
   }
-
-
 
 
   writeIndexFileToDisk(*(indexFile.get()), clo);
@@ -145,21 +143,21 @@ generate(CommandLineOptions &clo)
 
   switch (type) {
 
-    case bd::DataType::UnsignedCharacter:
-      preproc::generateIndexFile<unsigned char>(clo);
-      break;
+  case bd::DataType::UnsignedCharacter:
+    preproc::generateIndexFile<unsigned char>(clo, type);
+    break;
 
-    case bd::DataType::UnsignedShort:
-      preproc::generateIndexFile<unsigned short>(clo);
-      break;
+  case bd::DataType::UnsignedShort:
+    preproc::generateIndexFile<unsigned short>(clo, type);
+    break;
 
-    case bd::DataType::Float:
-      preproc::generateIndexFile<float>(clo);
-      break;
+  case bd::DataType::Float:
+    preproc::generateIndexFile<float>(clo, type);
+    break;
 
-    default:
-      bd::Err() << "Unsupported/unknown datatype: " << clo.dataType << ".\n Exiting...";
-      break;
+  default:
+    bd::Err() << "Unsupported/unknown datatype: " << clo.dataType << ".\n Exiting...";
+    break;
 
   }
 }
@@ -178,13 +176,14 @@ convert(CommandLineOptions &clo)
     // Print blocks in json format to standard out.
     index->writeAsciiIndexFile(std::cout);
 
-  } else {
+  }
+  else {
 
-    // Otherwise, just write the blocks to a json text file.
-    // We can't use makeFileNameString() because we want to use the binary file's name.
+ // Otherwise, just write the blocks to a json text file.
+ // We can't use makeFileNameString() because we want to use the binary file's name.
 
     auto startName = clo.inFile.rfind('/') + 1;
-    auto endName = startName + ( clo.inFile.size() - clo.inFile.rfind('.'));
+    auto endName = startName + (clo.inFile.size() - clo.inFile.rfind('.'));
 
     std::string name(clo.inFile, startName, endName);
     name += ".json";
@@ -200,8 +199,7 @@ convert(CommandLineOptions &clo)
 ///////////////////////////////////////////////////////////////////////////////
 int
 main(int argc, const char *argv[])
-try
-{
+try {
 
   using preproc::CommandLineOptions;
   CommandLineOptions clo;
@@ -216,25 +214,26 @@ try
 
   switch (clo.actionType) {
 
-    case preproc::ActionType::Generate:
-        preproc::generate(clo);
-      break;
+  case preproc::ActionType::Generate:
+    preproc::generate(clo);
+    break;
 
-    case preproc::ActionType::Convert:
-      preproc::convert(clo);
-      break;
+  case preproc::ActionType::Convert:
+    preproc::convert(clo);
+    break;
 
-    default:
-      Err() << "Provide an action. Use -h for help.";
-      bd::logger::shutdown();
-      return 1;
+  default:
+    Err() << "Provide an action. Use -h for help.";
+    bd::logger::shutdown();
+    return 1;
   }
 
   bd::logger::shutdown();
 
   return 0;
 
-} catch (std::exception &e) {
+}
+catch (std::exception &e) {
 
   Err() << "Caught exception in main: " << e.what();
   bd::logger::shutdown();

@@ -209,25 +209,25 @@ try
 
 
   // volume minimum value
-  TCLAP::ValueArg<double>
-      volMinArg("", "vol-min",
-                "Volume min value.\n"
-                    "Valid value: [MIN_DOUBLE - MAX_DOUBLE]\n"
-                    "Required",
-                true,
-                std::numeric_limits<double>::lowest(), "double");
-  cmd.add(volMinArg);
+//  TCLAP::ValueArg<double>
+//      volMinArg("", "vol-min",
+//                "Volume min value.\n"
+//                    "Valid value: [MIN_DOUBLE - MAX_DOUBLE]\n"
+//                    "Required",
+//                true,
+//                std::numeric_limits<double>::lowest(), "double");
+//  cmd.add(volMinArg);
 
 
   // volume maximum value
-  TCLAP::ValueArg<double>
-      volMaxArg("", "vol-max",
-                "Volume max value.\n"
-                    "Valid value: [MIN_DOUBLE - MAX_DOUBLE]\n"
-                    "Required",
-                true,
-                std::numeric_limits<double>::max(), "double");
-  cmd.add(volMaxArg);
+//  TCLAP::ValueArg<double>
+//      volMaxArg("", "vol-max",
+//                "Volume max value.\n"
+//                    "Valid value: [MIN_DOUBLE - MAX_DOUBLE]\n"
+//                    "Required",
+//                true,
+//                std::numeric_limits<double>::max(), "double");
+//  cmd.add(volMaxArg);
 
 
   // print blocks
@@ -261,8 +261,8 @@ try
   opts.blockThreshold_Max = blockROV_Max_Arg.getValue();
   opts.voxelOpacityRel_Max = voxelOpacityRelevance_Max_Arg.getValue();
   opts.voxelOpacityRel_Min = voxelOpacityRelevance_Min_Arg.getValue();
-  opts.volMin = volMinArg.getValue();
-  opts.volMax = volMaxArg.getValue();
+//  opts.volMin = volMinArg.getValue();
+//  opts.volMax = volMaxArg.getValue();
 
   return static_cast<int>(cmd.getArgList().size());
 
@@ -336,9 +336,9 @@ operator<<(std::ostream &os, const CommandLineOptions &opts)
      << "\n" "Voxel opacity rel. min/max: "
      << opts.voxelOpacityRel_Min << " - "
      << opts.voxelOpacityRel_Max
-     << "\n" "Volume min/max : "
-     << opts.volMin << " - "
-     << opts.volMax
+//     << "\n" "Volume min/max : "
+//     << opts.volMin << " - "
+//     << opts.volMax
      << "\n" "Print blocks: " << std::boolalpha
      << opts.printBlocks;
 

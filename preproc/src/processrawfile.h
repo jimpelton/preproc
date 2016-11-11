@@ -6,14 +6,11 @@
 #include "cmdline.h"
 #include "voxelopacityfunction.h"
 
-//#include <bd/io/fileblockcollection.h>
-#include <bd/util/util.h>
 #include <bd/io/indexfile.h>
 #include <bd/log/logger.h>
-#include <bd/io/datfile.h>
-#include <bd/filter/valuerangefilter.h>
 #include <bd/tbb/parallelfor_voxelclassifier.h>
 #include <bd/volume/transferfunction.h>
+#include <bd/tbb/parallelreduce_blockminmax.h>
 
 #include <tbb/tbb.h>
 
@@ -143,7 +140,7 @@ processRawFile(CommandLineOptions const &clo,
 
     // set up the VoxelOpacityFunction (may not actually be used, but it doesn't
     // have a default c'tor, so, ya know can't default c'tor it).
-    preproc::VoxelOpacityFunction<Ty> relFunc{ trFunc, clo.volMin, clo.volMax };
+    preproc::VoxelOpacityFunction<Ty> relFunc{ trFunc, volume.min(), volume.max() };
 
 
     bd::Buffer<Ty> *b{ nullptr };

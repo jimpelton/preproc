@@ -55,9 +55,9 @@ struct CommandLineOptions
   // voxel opacity thresh max
   double voxelOpacityRel_Max;
   // volume min value
-  double volMin;
+//  double volMin;
   // volume max value
-  double volMax;
+//  double volMax;
 
 };
 

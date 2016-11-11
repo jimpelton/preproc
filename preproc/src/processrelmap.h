@@ -18,6 +18,11 @@
 namespace preproc
 {
 
+void
+processRelMap(CommandLineOptions const &clo,
+              bd::Volume &volume,
+              std::vector<bd::FileBlock> & blocks);
+
 
 /// \brief Use RMap to classify voxels as empty of non-empty within each block.
 void
@@ -27,58 +32,11 @@ parallelCountBlockEmptyVoxels(CommandLineOptions const &clo,
                               std::vector <bd::FileBlock> &blocks);
 
 void
-parallelSumBlockVisibilities(CommandLineOptions const &clo,
+parallelSumBlockRelevances(CommandLineOptions const &clo,
                              bd::Volume &volume,
                              bd::Buffer<double> const *buf,
                              std::vector <bd::FileBlock> &blocks);
 
-/// \brief For each buffer in the RMap file, count the number of irrelevant voxels for each
-/// blocks, then compute the rov.
-/// \param clo
-/// \param collection
-template<class Ty>
-void
-processRelMap(CommandLineOptions const &clo,
-              bd::Volume &volume,
-                std::vector<bd::FileBlock> & blocks)
-{
-  bd::BufferedReader<double> r{ clo.bufferSize };
-
-  if (!r.open(clo.rmapFilePath)) {
-    throw std::runtime_error("Could not open file: " + clo.rmapFilePath);
-  }
-  r.start();
-
-
-  // In parallel compute block statistics based on the RMap values.
-  bd::Buffer<double> *buf{ nullptr };
-  while ((buf = r.waitNextFullUntilNone()) != nullptr) {
-    parallelCountBlockEmptyVoxels(clo, volume, buf, blocks);
-    parallelSumBlockVisibilities(clo, volume, buf, blocks);
-
-    r.waitReturnEmpty(buf);
-  }
-
-
-
-  // compute the block ratio-of-visibility
-//  for (auto &b : collection.blocks()) {
-//    uint64_t totalvox{ b.voxel_dims[0] * b.voxel_dims[1] * b.voxel_dims[2] };
-//    assert(totalvox > 0);
-//    b.rov /= double(totalvox); //double(b.empty_voxels);
-//  }
-
-  // mark blocks as empty or non-empty by computing the ratio of visibility.
-  for (auto &b : blocks) {
-    if (b.rov >= clo.blockThreshold_Min && b.rov <= clo.blockThreshold_Max) {
-      b.is_empty = 0;
-    } else {
-      b.is_empty = 1;
-    }
-  }
-
-
-}
 
 
 } // namespace preproc
