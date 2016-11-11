@@ -6,7 +6,7 @@
 #include "cmdline.h"
 #include "voxelopacityfunction.h"
 
-#include <bd/io/fileblockcollection.h>
+//#include <bd/io/fileblockcollection.h>
 #include <bd/util/util.h>
 #include <bd/io/indexfile.h>
 #include <bd/log/logger.h>

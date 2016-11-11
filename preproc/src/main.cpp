@@ -9,7 +9,7 @@
 #include "processrawfile.h"
 #include "processrelmap.h"
 
-#include <bd/io/fileblockcollection.h>
+//#include <bd/io/fileblockcollection.h>
 #include <bd/util/util.h>
 #include <bd/io/indexfile.h>
 #include <bd/log/logger.h>
@@ -92,6 +92,12 @@ generateIndexFile(const CommandLineOptions &clo)
       collection{{ clo.vol_dims[0], clo.vol_dims[1], clo.vol_dims[2] },
                  { clo.num_blks[0], clo.num_blks[1], clo.num_blks[2] }};
 
+  std::unique_ptr<bd::IndexFile>
+    indexFile{
+    bd::IndexFile::fromBlockCollection<Ty>(clo.inFile,
+    collection,
+    bd::to_dataType(clo.dataType)) };
+
   collection.initBlocks();
   collection.volume().min(clo.volMin);
   collection.volume().max(clo.volMax);
@@ -105,11 +111,7 @@ generateIndexFile(const CommandLineOptions &clo)
     processRelMap(clo, collection);
   }
 
-  std::unique_ptr<bd::IndexFile>
-      indexFile{
-          bd::IndexFile::fromBlockCollection<Ty>(clo.inFile,
-                                                 collection,
-                                                 bd::to_dataType(clo.dataType)) };
+
 
 
   writeIndexFileToDisk(*(indexFile.get()), clo);

@@ -11,7 +11,7 @@
 #include <bd/io/bufferedreader.h>
 #include <bd/io/buffer.h>
 #include <bd/io/fileblock.h>
-#include <bd/io/fileblockcollection.h>
+//#include <bd/io/fileblockcollection.h>
 
 #include <vector>
 
@@ -39,7 +39,8 @@ parallelSumBlockVisibilities(CommandLineOptions const &clo,
 template<class Ty>
 void
 processRelMap(CommandLineOptions const &clo,
-              bd::FileBlockCollection <Ty> &collection)
+              bd::Volume &volume,
+                std::vector<bd::FileBlock> & blocks)
 {
   bd::BufferedReader<double> r{ clo.bufferSize };
 
@@ -52,8 +53,8 @@ processRelMap(CommandLineOptions const &clo,
   // In parallel compute block statistics based on the RMap values.
   bd::Buffer<double> *buf{ nullptr };
   while ((buf = r.waitNextFullUntilNone()) != nullptr) {
-    parallelCountBlockEmptyVoxels(clo, collection.volume(), buf, collection.blocks());
-    parallelSumBlockVisibilities(clo, collection.volume(), buf, collection.blocks());
+    parallelCountBlockEmptyVoxels(clo, volume, buf, blocks);
+    parallelSumBlockVisibilities(clo, volume, buf, blocks);
 
     r.waitReturnEmpty(buf);
   }
@@ -68,7 +69,7 @@ processRelMap(CommandLineOptions const &clo,
 //  }
 
   // mark blocks as empty or non-empty by computing the ratio of visibility.
-  for (auto &b : collection.blocks()) {
+  for (auto &b : blocks) {
     if (b.rov >= clo.blockThreshold_Min && b.rov <= clo.blockThreshold_Max) {
       b.is_empty = 0;
     } else {
