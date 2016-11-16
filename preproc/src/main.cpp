@@ -29,17 +29,16 @@ using bd::Info;
 namespace preproc
 {
 
-
 ////////////////////////////////////////////////////////////////////////////////
 std::string
 makeFileNameString(const CommandLineOptions &clo, const char *extension)
 {
   std::stringstream outFileName;
   outFileName << clo.outFilePath << '/' << clo.outFilePrefix
-    << '_' << clo.num_blks[0] << '-' << clo.num_blks[1] << '-'
-    << clo.num_blks[2]
-    /*<< '_' << clo.blockThreshold_Min << '-' << clo.blockThreshold_Max*/
-    << extension;
+              << '_' << clo.num_blks[0] << '-' << clo.num_blks[1] << '-'
+              << clo.num_blks[2]
+              /*<< '_' << clo.blockThreshold_Min << '-' << clo.blockThreshold_Max*/
+              << extension;
 
   return outFileName.str();
 }
@@ -86,15 +85,17 @@ generateIndexFile(const CommandLineOptions &clo, bd::DataType type)
 //                 { clo.num_blks[0], clo.num_blks[1], clo.num_blks[2] }};
 
   bd::Info() << "Computing volume min/max.";
-  double vMin, vMax;
-  volumeMinMax<Ty>(clo.inFile, clo.bufferSize, &vMin, &vMax);
+  double vMin, vMax, vTotal;
+  volumeMinMax<Ty>(clo.inFile, clo.bufferSize, &vMin, &vMax, &vTotal);
 
-  std::unique_ptr<bd::IndexFile> indexFile{};
+  std::unique_ptr<bd::IndexFile> indexFile{ };
   indexFile->getVolume().min(vMin);
   indexFile->getVolume().max(vMax);
-  indexFile->getVolume().voxelDims({ clo.vol_dims[0], clo.vol_dims[1], clo.vol_dims[2] });
-  indexFile->getVolume().block_count({ clo.num_blks[0], clo.num_blks[1], clo.num_blks[2] });
-
+  indexFile->getVolume().total(vTotal);
+  indexFile->getVolume()
+           .voxelDims({ clo.vol_dims[0], clo.vol_dims[1], clo.vol_dims[2] });
+  indexFile->getVolume()
+           .block_count({ clo.num_blks[0], clo.num_blks[1], clo.num_blks[2] });
 
   bd::Info() << "Processing raw file.";
   processRawFile<Ty>(clo,
@@ -102,19 +103,17 @@ generateIndexFile(const CommandLineOptions &clo, bd::DataType type)
                      indexFile->getFileBlocks(),
                      clo.skipRmapGeneration);
 
-  
-  
   if (!clo.skipRmapGeneration) {
     bd::Info() << "Processing relevance map.";
     processRelMap(clo,
-                  indexFile->getVolume(), 
+                  indexFile->getVolume(),
                   indexFile->getFileBlocks());
   }
 
-
-  writeIndexFileToDisk(*(indexFile.get()), clo);
+  writeIndexFileToDisk(*( indexFile.get()), clo);
 
 }
+
 
 /// \throws std::runtime_error if rawfile can't be opened.
 void
@@ -143,21 +142,21 @@ generate(CommandLineOptions &clo)
 
   switch (type) {
 
-  case bd::DataType::UnsignedCharacter:
-    preproc::generateIndexFile<unsigned char>(clo, type);
-    break;
+    case bd::DataType::UnsignedCharacter:
+      preproc::generateIndexFile<unsigned char>(clo, type);
+      break;
 
-  case bd::DataType::UnsignedShort:
-    preproc::generateIndexFile<unsigned short>(clo, type);
-    break;
+    case bd::DataType::UnsignedShort:
+      preproc::generateIndexFile<unsigned short>(clo, type);
+      break;
 
-  case bd::DataType::Float:
-    preproc::generateIndexFile<float>(clo, type);
-    break;
+    case bd::DataType::Float:
+      preproc::generateIndexFile<float>(clo, type);
+      break;
 
-  default:
-    bd::Err() << "Unsupported/unknown datatype: " << clo.dataType << ".\n Exiting...";
-    break;
+    default:
+      bd::Err() << "Unsupported/unknown datatype: " << clo.dataType << ".\n Exiting...";
+      break;
 
   }
 }
@@ -176,14 +175,13 @@ convert(CommandLineOptions &clo)
     // Print blocks in json format to standard out.
     index->writeAsciiIndexFile(std::cout);
 
-  }
-  else {
+  } else {
 
- // Otherwise, just write the blocks to a json text file.
- // We can't use makeFileNameString() because we want to use the binary file's name.
+    // Otherwise, just write the blocks to a json text file.
+    // We can't use makeFileNameString() because we want to use the binary file's name.
 
     auto startName = clo.inFile.rfind('/') + 1;
-    auto endName = startName + (clo.inFile.size() - clo.inFile.rfind('.'));
+    auto endName = startName + ( clo.inFile.size() - clo.inFile.rfind('.'));
 
     std::string name(clo.inFile, startName, endName);
     name += ".json";
@@ -199,7 +197,8 @@ convert(CommandLineOptions &clo)
 ///////////////////////////////////////////////////////////////////////////////
 int
 main(int argc, const char *argv[])
-try {
+try
+{
 
   using preproc::CommandLineOptions;
   CommandLineOptions clo;
@@ -214,18 +213,18 @@ try {
 
   switch (clo.actionType) {
 
-  case preproc::ActionType::Generate:
-    preproc::generate(clo);
-    break;
+    case preproc::ActionType::Generate:
+      preproc::generate(clo);
+      break;
 
-  case preproc::ActionType::Convert:
-    preproc::convert(clo);
-    break;
+    case preproc::ActionType::Convert:
+      preproc::convert(clo);
+      break;
 
-  default:
-    Err() << "Provide an action. Use -h for help.";
-    bd::logger::shutdown();
-    return 1;
+    default:
+      Err() << "Provide an action. Use -h for help.";
+      bd::logger::shutdown();
+      return 1;
   }
 
   bd::logger::shutdown();

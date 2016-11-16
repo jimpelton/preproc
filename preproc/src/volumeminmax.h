@@ -1,6 +1,7 @@
 #ifndef preproc_volumeminmax
 #define preproc_volumeminmax
 
+
 #include <bd/io/buffer.h>
 #include <bd/io/bufferedreader.h>
 #include <bd/log/logger.h>
@@ -12,18 +13,23 @@
 
 template<typename Ty>
 void
-volumeMinMax(std::string const & path, size_t szbuf, double *volMin, double *volMax)
+volumeMinMax(std::string const & path,
+             size_t szbuf,
+             double *volMin,
+             double *volMax,
+             double *volTotal)
 {
   bd::BufferedReader<Ty> r{ szbuf };
   if (!r.open(path)) {
     bd::Err() << "File " << path << " was not opened.";
     return;
   }
-
-
   r.start();
-  Ty max{ 0 };
-  Ty min{ 0 };
+
+
+  double max{ 0 };
+  double min{ 0 };
+  double total{ 0 };
 
   bd::Info() << "Begin min/max computation.";
 
@@ -41,6 +47,8 @@ volumeMinMax(std::string const & path, size_t szbuf, double *volMin, double *vol
     if (min > mm.min_value)
       min = mm.min_value;
 
+    total += mm.tot_value;
+
     r.waitReturnEmpty(buf);
 
   }
@@ -48,6 +56,7 @@ volumeMinMax(std::string const & path, size_t szbuf, double *volMin, double *vol
   bd::Info() << "Finished min/max computation.";
   *volMin = min;
   *volMax = max;
+  *volTotal = total;
 }
 
 #endif // ! preproc_volumeminmax

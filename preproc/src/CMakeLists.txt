@@ -6,6 +6,7 @@ set(preproc_HEADERS
         "${CMAKE_CURRENT_SOURCE_DIR}/cmdline.h"
         "${CMAKE_CURRENT_SOURCE_DIR}/processrawfile.h"
         "${CMAKE_CURRENT_SOURCE_DIR}/processrelmap.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/volumeminmax.h"
         "${CMAKE_CURRENT_SOURCE_DIR}/voxelopacityfunction.h"
         PARENT_SCOPE
         )

@@ -8,34 +8,26 @@
 #include "cmdline.h"
 
 #include <bd/volume/volume.h>
-#include <bd/io/bufferedreader.h>
 #include <bd/io/buffer.h>
 #include <bd/io/fileblock.h>
-//#include <bd/io/fileblockcollection.h>
 
 #include <vector>
 
 namespace preproc
 {
 
+
+/// \brief For each buffer in the RMap file, count the number of irrelevant voxels for each
+/// blocks, then compute the rov.
+/// \param clo[in] clo - User supplied options.
+/// \param volume[in,out] - The volume associated with the relevance map.
+/// \param blocks[in,o
 void
 processRelMap(CommandLineOptions const &clo,
               bd::Volume &volume,
               std::vector<bd::FileBlock> & blocks);
 
 
-/// \brief Use RMap to classify voxels as empty of non-empty within each block.
-void
-parallelCountBlockEmptyVoxels(CommandLineOptions const &clo,
-                              bd::Volume &volume,
-                              bd::Buffer<double> const *buf,
-                              std::vector <bd::FileBlock> &blocks);
-
-void
-parallelSumBlockRelevances(CommandLineOptions const &clo,
-                             bd::Volume &volume,
-                             bd::Buffer<double> const *buf,
-                             std::vector <bd::FileBlock> &blocks);
 
 
 
