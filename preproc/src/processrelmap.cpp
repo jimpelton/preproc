@@ -12,8 +12,9 @@ namespace preproc
 
   /// \brief For each buffer in the RMap file, count the number of irrelevant voxels for each
   /// blocks, then compute the rov.
-  /// \param clo
-  /// \param collection
+  /// \param clo - 
+  /// \param volume - 
+  /// \param blocks - 
   //template<class Ty>
 void
 processRelMap(CommandLineOptions const &clo,
@@ -39,14 +40,14 @@ processRelMap(CommandLineOptions const &clo,
 
 
 
-  // compute the block ratio-of-visibility
-  //  for (auto &b : collection.blocks()) {
+  // compute the block relevance as a ratio of
+  //  for (auto &b : blocks) {
   //    uint64_t totalvox{ b.voxel_dims[0] * b.voxel_dims[1] * b.voxel_dims[2] };
   //    assert(totalvox > 0);
   //    b.rov /= double(totalvox); //double(b.empty_voxels);
   //  }
 
-  // mark blocks as empty or non-empty by computing the ratio of visibility.
+  // mark blocks as empty or non-empty by testing the relevance values.
   for (auto &b : blocks) {
     if (b.rov >= clo.blockThreshold_Min && b.rov <= clo.blockThreshold_Max) {
       b.is_empty = 0;

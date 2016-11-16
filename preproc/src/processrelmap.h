@@ -24,13 +24,15 @@ processRelMap(CommandLineOptions const &clo,
               std::vector<bd::FileBlock> & blocks);
 
 
-/// \brief Use RMap to classify voxels as empty of non-empty within each block.
+/// \brief Classify the voxels as relevant or irrelevant depending on the
+/// voxelOpacityRel_Min/Max command line options.
 void
 parallelCountBlockEmptyVoxels(CommandLineOptions const &clo,
                               bd::Volume &volume,
                               bd::Buffer<double> const *buf,
                               std::vector <bd::FileBlock> &blocks);
 
+ /// \brief Sum the relevances in the RMap for each block. 
 void
 parallelSumBlockRelevances(CommandLineOptions const &clo,
                              bd::Volume &volume,
