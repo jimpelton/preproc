@@ -13,56 +13,6 @@
 
 namespace preproc
 {
-  
-
-/// \brief For each buffer in the RMap file, count the number of irrelevant voxels for each
-/// blocks, then compute the rov.
-/// \param clo - 
-/// \param volume - 
-/// \param blocks - 
-void
-processRelMap(CommandLineOptions const &clo,
-              bd::Volume &volume,
-              std::vector<bd::FileBlock> & blocks)
-{
-  bd::BufferedReader<double> r{ clo.bufferSize };
-
-  if (!r.open(clo.rmapFilePath)) {
-    throw std::runtime_error("Could not open file: " + clo.rmapFilePath);
-  }
-  r.start();
-
-
-  // In parallel compute block statistics based on the RMap values.
-  bd::Buffer<double> *buf{ nullptr };
-  while ((buf = r.waitNextFullUntilNone()) != nullptr) {
-    parallelCountBlockEmptyVoxels(clo, volume, buf, blocks);
-    parallelSumBlockRelevances(clo, volume, buf, blocks);
-
-    r.waitReturnEmpty(buf);
-  }
-
-
-
-  // compute the block relevance as a ratio of
-  //  for (auto &b : blocks) {
-  //    uint64_t totalvox{ b.voxel_dims[0] * b.voxel_dims[1] * b.voxel_dims[2] };
-  //    assert(totalvox > 0);
-  //    b.rov /= double(totalvox); //double(b.empty_voxels);
-  //  }
-
-  // mark blocks as empty or non-empty by testing the relevance values.
-  for (auto &b : blocks) {
-    if (b.rov >= clo.blockThreshold_Min && b.rov <= clo.blockThreshold_Max) {
-      b.is_empty = 0;
-    }
-    else {
-      b.is_empty = 1;
-    }
-  }
-
-
-}
 
 namespace
 {
@@ -126,10 +76,15 @@ parallelSumBlockRelevances(CommandLineOptions const &clo,
 } // namespace
 
 
+/// \brief For each buffer in the RMap file, count the number of irrelevant voxels for each
+/// blocks, then compute the rov.
+/// \param clo - 
+/// \param volume - 
+/// \param blocks - 
 void
 processRelMap(CommandLineOptions const &clo,
               bd::Volume &volume,
-              std::vector<bd::FileBlock> &blocks)
+              std::vector<bd::FileBlock> & blocks)
 {
   bd::BufferedReader<double> r{ clo.bufferSize };
 
@@ -141,7 +96,7 @@ processRelMap(CommandLineOptions const &clo,
 
   // In parallel compute block statistics based on the RMap values.
   bd::Buffer<double> *buf{ nullptr };
-  while (( buf = r.waitNextFullUntilNone()) != nullptr) {
+  while ((buf = r.waitNextFullUntilNone()) != nullptr) {
     parallelCountBlockEmptyVoxels(clo, volume, buf, blocks);
     parallelSumBlockRelevances(clo, volume, buf, blocks);
 
@@ -149,17 +104,60 @@ processRelMap(CommandLineOptions const &clo,
   }
 
 
-  // mark blocks as empty or non-empty by computing the ratio of visibility.
+  // compute the block relevance as a ratio of
+  //  for (auto &b : blocks) {
+  //    uint64_t totalvox{ b.voxel_dims[0] * b.voxel_dims[1] * b.voxel_dims[2] };
+  //    assert(totalvox > 0);
+  //    b.rov /= double(totalvox); //double(b.empty_voxels);
+  //  }
+
+  // mark blocks as empty or non-empty by testing the relevance values.
   for (auto &b : blocks) {
     if (b.rov >= clo.blockThreshold_Min && b.rov <= clo.blockThreshold_Max) {
       b.is_empty = 0;
-    } else {
+    }
+    else {
       b.is_empty = 1;
     }
   }
+} // processRelMap()
 
 
-}
+
+//void
+//processRelMap(CommandLineOptions const &clo,
+//              bd::Volume &volume,
+//              std::vector<bd::FileBlock> &blocks)
+//{
+//  bd::BufferedReader<double> r{ clo.bufferSize };
+//
+//  if (!r.open(clo.rmapFilePath)) {
+//    throw std::runtime_error("Could not open file: " + clo.rmapFilePath);
+//  }
+//  r.start();
+//
+//
+//  // In parallel compute block statistics based on the RMap values.
+//  bd::Buffer<double> *buf{ nullptr };
+//  while (( buf = r.waitNextFullUntilNone()) != nullptr) {
+//    parallelCountBlockEmptyVoxels(clo, volume, buf, blocks);
+//    parallelSumBlockRelevances(clo, volume, buf, blocks);
+//
+//    r.waitReturnEmpty(buf);
+//  }
+//
+//
+//  // mark blocks as empty or non-empty by computing the ratio of visibility.
+//  for (auto &b : blocks) {
+//    if (b.rov >= clo.blockThreshold_Min && b.rov <= clo.blockThreshold_Max) {
+//      b.is_empty = 0;
+//    } else {
+//      b.is_empty = 1;
+//    }
+//  }
+//
+//
+//}
 
 
 } // namespace preproc
