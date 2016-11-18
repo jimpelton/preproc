@@ -134,7 +134,7 @@ generate(CommandLineOptions &clo)
     clo.dataType = bd::to_string(datfile.dataType);
 
     bd::Info() << clo << std::endl; // print cmd line options
-    std::cout << "\n---Begin Dat File---\n" << datfile << "\n---End Dat File---\n";
+    //std::cout << "\n---Begin Dat File---\n" << datfile << "\n---End Dat File---\n";
 
   }
 
@@ -210,7 +210,7 @@ try
     bd::logger::shutdown();
     return 1;
   }
-  preproc::printThem(clo);
+  //preproc::printThem(clo);
 
   switch (clo.actionType) {
 
