@@ -74,7 +74,7 @@ createRelMap(bd::Buffer<Ty> const *buf,
   Classifier classifier{ relMap, buf, relFunc };
 
   // Process this buffer in parallel with the classifier
-  tbb::blocked_range <size_t> range{ 0, buf->getNumElements() };
+  tbb::blocked_range<size_t> range{ 0, buf->getNumElements() };
   tbb::parallel_for(range, classifier);
 
   // Write RMap for this buffer out to disk.

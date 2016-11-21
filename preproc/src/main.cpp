@@ -84,6 +84,8 @@ generateIndexFile(const CommandLineOptions &clo, bd::DataType type)
 //      collection{{ clo.vol_dims[0], clo.vol_dims[1], clo.vol_dims[2] },
 //                 { clo.num_blks[0], clo.num_blks[1], clo.num_blks[2] }};
 
+
+
   bd::Info() << "Computing volume min/max.";
   double vMin, vMax, vTotal;
   volumeMinMax<Ty>(clo.inFile, clo.bufferSize, &vMin, &vMax, &vTotal);
@@ -92,6 +94,8 @@ generateIndexFile(const CommandLineOptions &clo, bd::DataType type)
   indexFile->getVolume().min(vMin);
   indexFile->getVolume().max(vMax);
   indexFile->getVolume().total(vTotal);
+  indexFile->getVolume()
+            .avg(vTotal / (clo.vol_dims[0] * clo.vol_dims[1] * clo.vol_dims[2]));
   indexFile->getVolume()
            .voxelDims({ clo.vol_dims[0], clo.vol_dims[1], clo.vol_dims[2] });
   indexFile->getVolume()
