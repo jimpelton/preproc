@@ -54,6 +54,8 @@ parallelBlockMinMax(bd::Volume const &volume,
     b.total_val += pairs[i].total;
   }
 
+
+
 } // parallelBlockMinMax
 
 template<class Ty>
@@ -138,8 +140,8 @@ processRawFile(CommandLineOptions const &clo,
 
     } // if(! skipRMap)
 
-    // set up the VoxelOpacityFunction (may not actually be used, but it doesn't
-    // have a default c'tor, so, ya know can't default c'tor it).
+
+    // set up the VoxelOpacityFunction
     preproc::VoxelOpacityFunction<Ty> relFunc{ trFunc, volume.min(), volume.max() };
 
 
@@ -162,6 +164,12 @@ processRawFile(CommandLineOptions const &clo,
   catch (std::runtime_error &e) {
     bd::Err() << "Exception in " << __func__ << ": " << e.what();
     return -1;
+  }
+
+  // compute block averages
+  for (size_t i{ 0 }; i < blocks.size(); ++i) {
+    bd::FileBlock &b = blocks[i];
+    b.avg_val = b.total_val / (b.voxel_dims[0] * b.voxel_dims[1] * b.voxel_dims[2]);
   }
 
   return 0;

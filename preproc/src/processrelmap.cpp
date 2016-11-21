@@ -41,16 +41,13 @@ parallelCountBlockEmptyVoxels(CommandLineOptions const &clo,
   tbb::parallel_reduce(range, empties);
 
 
-  // Total the empty voxels for each block, and all the blocks.
+  // Total the empty voxels for each block.
   uint64_t const *emptyCounts{ empties.empties() };
-  uint64_t totalEmpties{ 0 };
   for (size_t i{ 0 }; i < blocks.size(); ++i) {
     bd::FileBlock *b{ &blocks[i] };
     b->empty_voxels += emptyCounts[i];
-    totalEmpties += emptyCounts[i];
   }
 
-  volume.numEmptyVoxels(volume.numEmptyVoxels() + totalEmpties);
 
 } // parallelCountBlockEmptyVoxels()
 
