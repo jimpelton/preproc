@@ -13,6 +13,7 @@
 #include <bd/tbb/parallelreduce_blockminmax.h>
 
 #include <tbb/tbb.h>
+#include <tbb/task_scheduler_init.h>
 
 #include <sstream>
 #include <string>
@@ -147,6 +148,9 @@ processRawFile(CommandLineOptions const &clo,
 
     bd::Buffer<Ty> *b{ nullptr };
     r.start();
+
+    tbb::task_scheduler_init init(clo.numThreads);
+
     while ((b = r.waitNextFullUntilNone()) != nullptr) {
 
       parallelBlockMinMax(volume, blocks, b);

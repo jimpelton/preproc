@@ -207,6 +207,14 @@ try
                                     1.0, "float");
   cmd.add(voxelOpacityRelevance_Max_Arg);
 
+  TCLAP::ValueArg<int>
+    numThreadsArg("n",
+                  "num-threads",
+                  "Max number of threads to use.\n"
+                  "Default: # cpus",
+                  false,
+                  0, "int");
+  cmd.add(numThreadsArg);
 
   // volume minimum value
 //  TCLAP::ValueArg<double>
@@ -257,6 +265,7 @@ try
   opts.num_blks[1] = yBlocksArg.getValue();
   opts.num_blks[2] = zBlocksArg.getValue();
   opts.bufferSize = convertToBytes(bufferSizeArg.getValue());
+  opts.numThreads = numThreadsArg.getValue();
   opts.blockThreshold_Min = blockROV_Min_Arg.getValue();
   opts.blockThreshold_Max = blockROV_Max_Arg.getValue();
   opts.voxelOpacityRel_Max = voxelOpacityRelevance_Max_Arg.getValue();

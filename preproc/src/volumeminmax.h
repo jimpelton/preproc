@@ -8,6 +8,7 @@
 #include <bd/tbb/parallelreduce_minmax.h>
 
 #include <tbb/tbb.h>
+#include <tbb/task_scheduler_init.h>
 
 #include <string>
 
@@ -15,10 +16,12 @@ template<typename Ty>
 void
 volumeMinMax(std::string const & path,
              size_t szbuf,
+             int numThreads,
              double *volMin,
              double *volMax,
              double *volTotal)
 {
+
   bd::BufferedReader<Ty> r{ szbuf };
   if (!r.open(path)) {
     bd::Err() << "File " << path << " was not opened.";
@@ -34,6 +37,8 @@ volumeMinMax(std::string const & path,
   bd::Info() << "Begin min/max computation.";
 
   bd::Buffer<Ty> *buf{ nullptr };
+  
+  tbb::task_scheduler_init init(numThreads);
 
   while ((buf = r.waitNextFullUntilNone()) != nullptr) {
 
@@ -47,7 +52,11 @@ volumeMinMax(std::string const & path,
     if (min > mm.min_value)
       min = mm.min_value;
 
-    total += mm.tot_value;
+    if (total > 0.0) {
+      total += mm.tot_value;
+    } else {
+      total = mm.tot_value;
+    }
 
     r.waitReturnEmpty(buf);
 

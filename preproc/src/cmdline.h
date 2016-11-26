@@ -46,6 +46,8 @@ struct CommandLineOptions
   uint64_t vol_dims[3];
   // buffer size
   uint64_t bufferSize;
+  // number of threads
+  int numThreads;
   // threshold max
   double blockThreshold_Max;
   // threshold minimum

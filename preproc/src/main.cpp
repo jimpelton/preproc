@@ -88,7 +88,7 @@ generateIndexFile(const CommandLineOptions &clo, bd::DataType type)
 
   bd::Info() << "Computing volume min/max.";
   double vMin, vMax, vTotal;
-  volumeMinMax<Ty>(clo.inFile, clo.bufferSize, &vMin, &vMax, &vTotal);
+  volumeMinMax<Ty>(clo.inFile, clo.bufferSize, clo.numThreads, &vMin, &vMax, &vTotal);
 
   std::unique_ptr<bd::IndexFile> indexFile{ new bd::IndexFile() };
   indexFile->getVolume().voxelDims({ clo.vol_dims[0], clo.vol_dims[1], clo.vol_dims[2] });
@@ -101,6 +101,7 @@ generateIndexFile(const CommandLineOptions &clo, bd::DataType type)
   indexFile->init(type);
 
   bd::Info() << "Processing raw file.";
+
   processRawFile<Ty>(clo,
                      indexFile->getVolume(),
                      indexFile->getFileBlocks(),
@@ -113,7 +114,11 @@ generateIndexFile(const CommandLineOptions &clo, bd::DataType type)
                   indexFile->getFileBlocks());
   }
 
-  writeIndexFileToDisk(*( indexFile.get()), clo);
+
+
+
+
+  writeIndexFileToDisk(*(indexFile.get()), clo);
 
 }
 
@@ -212,7 +217,10 @@ try
     bd::logger::shutdown();
     return 1;
   }
-  //preproc::printThem(clo);
+
+  if (clo.numThreads == 0) {
+    clo.numThreads = tbb::task_scheduler_init::default_num_threads();
+  }
 
   switch (clo.actionType) {
 
