@@ -12,29 +12,30 @@
 
 #include <stdexcept>
 
+
 namespace preproc
 {
-
 namespace
 {
 
+
 /// \brief Use RMap to classify voxels as empty or non-empty within each block.
 void
-parallelCountBlockEmptyVoxels(CommandLineOptions const &clo,
+parallelCountBlockEmptyVoxels(bd::Buffer<double> const *buf,
+                              CommandLineOptions const &clo,
                               bd::Volume &volume,
-                              bd::Buffer<double> const *buf,
                               std::vector<bd::FileBlock> &blocks)
 {
   // if the relevance value from the rmap is in
   // [voxelOpacityRel_Min .. voxelOpacityRel_Max] then it is relevant.
   auto relevanceFunction = [&](double x) -> bool {
-    return x >= clo.voxelOpacityRel_Min && x <= clo.voxelOpacityRel_Max;
-  };
+      return x >= clo.voxelOpacityRel_Min && x <= clo.voxelOpacityRel_Max;
+    };
 
 
   // parallel_reduce body
   bd::ParallelReduceBlockEmpties<double, decltype(relevanceFunction)>
-      empties{ buf, &volume, relevanceFunction };
+    empties{ buf, &volume, relevanceFunction };
 
 
   // count the voxels in parallel
@@ -48,17 +49,16 @@ parallelCountBlockEmptyVoxels(CommandLineOptions const &clo,
     bd::FileBlock *b{ &blocks[i] };
     b->empty_voxels += emptyCounts[i];
   }
-
-
 } // parallelCountBlockEmptyVoxels()
 
+
+///////////////////////////////////////////////////////////////////////////////
 void
-parallelSumBlockRelevances(CommandLineOptions const &clo,
+parallelSumBlockRelevances(bd::Buffer<double> const *buf,
+                           CommandLineOptions const &clo,
                            bd::Volume &volume,
-                           bd::Buffer<double> const *buf,
                            std::vector<bd::FileBlock> &blocks)
 {
-
   bd::ParallelReduceBlockRov rov{ buf, &volume };
   tbb::blocked_range<size_t> range{ 0, buf->getNumElements() };
   tbb::parallel_reduce(range, rov);
@@ -68,9 +68,7 @@ parallelSumBlockRelevances(CommandLineOptions const &clo,
     bd::FileBlock *b{ &blocks[i] };
     b->rov += vis[i];
   }
-
 } // parallelSumBlockRelevances()
-
 } // namespace
 
 
@@ -82,7 +80,7 @@ parallelSumBlockRelevances(CommandLineOptions const &clo,
 void
 processRelMap(CommandLineOptions const &clo,
               bd::Volume &volume,
-              std::vector<bd::FileBlock> & blocks)
+              std::vector<bd::FileBlock> &blocks)
 {
   bd::BufferedReader<double> r{ clo.bufferSize };
 
@@ -95,9 +93,12 @@ processRelMap(CommandLineOptions const &clo,
 
   // In parallel compute block statistics based on the RMap values.
   bd::Buffer<double> *buf{ nullptr };
+
   while ((buf = r.waitNextFullUntilNone()) != nullptr) {
-    parallelCountBlockEmptyVoxels(clo, volume, buf, blocks);
-    parallelSumBlockRelevances(clo, volume, buf, blocks);
+
+    parallelCountBlockEmptyVoxels(buf, clo, volume, blocks);
+
+    parallelSumBlockRelevances(buf, clo, volume, blocks);
 
     r.waitReturnEmpty(buf);
   }
@@ -110,53 +111,25 @@ processRelMap(CommandLineOptions const &clo,
   //    b.rov /= double(totalvox); //double(b.empty_voxels);
   //  }
 
-  // mark blocks as empty or non-empty by testing the relevance values.
-  for (auto &b : blocks) {
-    if (b.rov >= clo.blockThreshold_Min && b.rov <= clo.blockThreshold_Max) {
-      b.is_empty = 0;
-    }
-    else {
-      b.is_empty = 1;
-    }
-  }
+  std::for_each(blocks.begin(),
+                blocks.end(),
+                [&clo](bd::FileBlock &b) -> void {
+                  if (b.rov >= clo.blockThreshold_Min && b.rov <= clo.blockThreshold_Max) {
+                    b.is_empty = 0;
+                  } else {
+                    b.is_empty = 1;
+                  }
+                });
+
+  auto minmaxE =
+    std::minmax_element(blocks.begin(),
+                        blocks.end(),
+                        [](bd::FileBlock const &lhs, bd::FileBlock const &rhs) -> bool {
+                          return lhs.rov < rhs.rov;
+                        });
+
+  volume.rovMin((*minmaxE.first).rov);
+  volume.rovMax((*minmaxE.second).rov);
+
 } // processRelMap()
-
-
-
-//void
-//processRelMap(CommandLineOptions const &clo,
-//              bd::Volume &volume,
-//              std::vector<bd::FileBlock> &blocks)
-//{
-//  bd::BufferedReader<double> r{ clo.bufferSize };
-//
-//  if (!r.open(clo.rmapFilePath)) {
-//    throw std::runtime_error("Could not open file: " + clo.rmapFilePath);
-//  }
-//  r.start();
-//
-//
-//  // In parallel compute block statistics based on the RMap values.
-//  bd::Buffer<double> *buf{ nullptr };
-//  while (( buf = r.waitNextFullUntilNone()) != nullptr) {
-//    parallelCountBlockEmptyVoxels(clo, volume, buf, blocks);
-//    parallelSumBlockRelevances(clo, volume, buf, blocks);
-//
-//    r.waitReturnEmpty(buf);
-//  }
-//
-//
-//  // mark blocks as empty or non-empty by computing the ratio of visibility.
-//  for (auto &b : blocks) {
-//    if (b.rov >= clo.blockThreshold_Min && b.rov <= clo.blockThreshold_Max) {
-//      b.is_empty = 0;
-//    } else {
-//      b.is_empty = 1;
-//    }
-//  }
-//
-//
-//}
-
-
 } // namespace preproc

@@ -28,21 +28,6 @@ processRelMap(CommandLineOptions const &clo,
               std::vector<bd::FileBlock> & blocks);
 
 
-///// \brief Classify the voxels as relevant or irrelevant depending on the
-///// voxelOpacityRel_Min/Max command line options.
-//void
-//parallelCountBlockEmptyVoxels(CommandLineOptions const &clo,
-//                              bd::Volume &volume,
-//                              bd::Buffer<double> const *buf,
-//                              std::vector <bd::FileBlock> &blocks);
-//
-///// \brief Sum the relevances in the RMap for each block.
-//void
-//parallelSumBlockRelevances(CommandLineOptions const &clo,
-//                             bd::Volume &volume,
-//                             bd::Buffer<double> const *buf,
-//                             std::vector <bd::FileBlock> &blocks);
-
 } // namespace preproc
 
 #endif //PREPROCESSOR_PROCESSRELMAP_H

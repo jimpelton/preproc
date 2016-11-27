@@ -148,7 +148,6 @@ processRawFile(CommandLineOptions const &clo,
 
     bd::Buffer<Ty> *b{ nullptr };
     r.start();
-
     tbb::task_scheduler_init init(clo.numThreads);
 
     while ((b = r.waitNextFullUntilNone()) != nullptr) {

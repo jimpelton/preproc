@@ -6,20 +6,21 @@
 #include <bd/io/bufferedreader.h>
 #include <bd/log/logger.h>
 #include <bd/tbb/parallelreduce_minmax.h>
+#include <bd/volume/volume.h>
 
 #include <tbb/tbb.h>
 #include <tbb/task_scheduler_init.h>
 
 #include <string>
 
+
+
 template<typename Ty>
 void
 volumeMinMax(std::string const & path,
              size_t szbuf,
              int numThreads,
-             double *volMin,
-             double *volMax,
-             double *volTotal)
+             bd::Volume &volume)
 {
 
   bd::BufferedReader<Ty> r{ szbuf };
@@ -63,9 +64,13 @@ volumeMinMax(std::string const & path,
   }
 
   bd::Info() << "Finished min/max computation.";
-  *volMin = min;
-  *volMax = max;
-  *volTotal = total;
+  
+  volume.min(min);
+  volume.max(max);
+  volume.total(total);
+  glm::u64vec3 dims{ volume.voxelDims() };
+  volume.avg(total / double(dims.x * dims.y * dims.z));
+
 }
 
 #endif // ! preproc_volumeminmax

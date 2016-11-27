@@ -87,21 +87,19 @@ generateIndexFile(const CommandLineOptions &clo, bd::DataType type)
 
 
   bd::Info() << "Computing volume min/max.";
-  double vMin, vMax, vTotal;
-  volumeMinMax<Ty>(clo.inFile, clo.bufferSize, clo.numThreads, &vMin, &vMax, &vTotal);
+
+
+  bd::Info() << "Processing raw file.";
+
+  
 
   std::unique_ptr<bd::IndexFile> indexFile{ new bd::IndexFile() };
   indexFile->getVolume().voxelDims({ clo.vol_dims[0], clo.vol_dims[1], clo.vol_dims[2] });
   indexFile->getVolume().block_count({ clo.num_blks[0], clo.num_blks[1], clo.num_blks[2] });
-  indexFile->getVolume().min(vMin);
-  indexFile->getVolume().max(vMax);
-  indexFile->getVolume().total(vTotal);
-  indexFile->getVolume().avg(vTotal /
-                                 double(clo.vol_dims[0] * clo.vol_dims[1] * clo.vol_dims[2]));
+
+  volumeMinMax<Ty>(clo.inFile, clo.bufferSize, clo.numThreads, indexFile->getVolume());
+
   indexFile->init(type);
-
-  bd::Info() << "Processing raw file.";
-
   processRawFile<Ty>(clo,
                      indexFile->getVolume(),
                      indexFile->getFileBlocks(),
@@ -113,9 +111,6 @@ generateIndexFile(const CommandLineOptions &clo, bd::DataType type)
                   indexFile->getVolume(),
                   indexFile->getFileBlocks());
   }
-
-
-
 
 
   writeIndexFileToDisk(*(indexFile.get()), clo);
