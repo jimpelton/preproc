@@ -50,6 +50,14 @@ try
   cmd.add(datFileArg);
 
 
+  TCLAP::ValueArg<std::string> idxFilePathArg("i",
+                                          "index-file",
+                                          "Path to index file file",
+                                          false,
+                                          "",
+                                          "string");
+  cmd.add(idxFilePathArg);
+
   // original volume dims
   TCLAP::ValueArg<size_t> x_dimArg("", "vx", "Original x dim.", false, 1, "uint");
   cmd.add(x_dimArg);
@@ -88,6 +96,7 @@ try
   opts.inFilePath = inFilePAthArg.getValue();
   opts.outFilePath = outFilePath.getValue();
   opts.datFilePath = datFileArg.getValue();
+  opts.indexFilePath = idxFilePathArg.getValue();
   opts.vol_dims[0] = x_dimArg.getValue();
   opts.vol_dims[1] = y_dimArg.getValue();
   opts.vol_dims[2] = z_dimArg.getValue();

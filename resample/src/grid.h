@@ -45,17 +45,18 @@ public:
   size_t
   IX(size_t x, size_t y, size_t z)
   {
-    if (!( x < nx )) {
+    if ( x > nx ) {
       x -= 1;
     }
 
-    if (!( y < ny )) {
+    if ( y > ny ) {
       y -= 1;
     }
 
-    if (!( z < nz )) {
+    if ( z > nz ) {
       z -= 1;
     }
+
     return x + nx * ( y + ny * z );
     //return x * nx * ny + y * nx + z;
   }

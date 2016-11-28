@@ -86,7 +86,6 @@ generateIndexFile(const CommandLineOptions &clo, bd::DataType type)
 
 
 
-  bd::Info() << "Computing volume min/max.";
 
 
   bd::Info() << "Processing raw file.";
@@ -96,7 +95,8 @@ generateIndexFile(const CommandLineOptions &clo, bd::DataType type)
   std::unique_ptr<bd::IndexFile> indexFile{ new bd::IndexFile() };
   indexFile->getVolume().voxelDims({ clo.vol_dims[0], clo.vol_dims[1], clo.vol_dims[2] });
   indexFile->getVolume().block_count({ clo.num_blks[0], clo.num_blks[1], clo.num_blks[2] });
-
+  
+  bd::Info() << "Computing volume min/max.";
   volumeMinMax<Ty>(clo.inFile, clo.bufferSize, clo.numThreads, indexFile->getVolume());
 
   indexFile->init(type);

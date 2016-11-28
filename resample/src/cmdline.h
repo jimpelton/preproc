@@ -21,6 +21,8 @@ namespace resample
     std::string outFilePath;
     // dat file path
     std::string datFilePath;
+    // index file path
+    std::string indexFilePath;
     // volume dimensions
     uint64_t vol_dims[3];
     // volume target dimensions
