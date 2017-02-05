@@ -49,6 +49,7 @@ public:
   uint64_t
   operator()(std::ostream &os)
   {
+    bd::Info() << "Starting writer loop.";
     while(true) {
 
       buffer_type *buf{ m_full->pop() };
@@ -64,12 +65,14 @@ public:
       m_empty->push(buf);
     }
 
+    bd::Info() << "Writer loop finished.";
+
     return 0;
   }
 
 private:
-  queue_type *m_full;
   queue_type *m_empty;
+  queue_type *m_full;
 
 };
 
@@ -91,12 +94,14 @@ public:
   operator()(std::istream &is)
   {
     size_t bytes_read{ 0 };
+    bd::Info() << "Starting reader loop.";
+
     while(true) {
       buffer_type *buf{ m_empty->pop() };
       if (! buf->getPtr()) { break; }
 
       is.read(reinterpret_cast<char *>(buf->getPtr()),
-              buf->getNumElements() * sizeof(Ty));
+              buf->getMaxNumElements() * sizeof(Ty));
 
       std::streamsize amount{ is.gcount() };
       bytes_read += amount;
@@ -104,18 +109,22 @@ public:
 
       m_full->push(buf);
 
-      if (amount < buf->getMaxNumElements() ) {
+      // entire file has been read.
+      if (amount < static_cast<long long>(buf->getMaxNumElements()) ) {
         break;
       }
 
     }
 
+    bd::Info() << "Reader loop finished.";
+
     return bytes_read;
   }
 
 private:
-  queue_type *m_full;
   queue_type *m_empty;
+  queue_type *m_full;
+
 };
 
 
@@ -193,7 +202,7 @@ allocateEmptyBuffers(char *mem, size_t szMem,
     for (size_t i{ 0 }; i < nBuff; ++i) {
       bd::Buffer<Ty> *buf{ new bd::Buffer<Ty>(p, count) };
       empty.push(buf);
-      p += count * i;
+      p += count;
     }
 
     return reinterpret_cast<char *>(p);
@@ -238,10 +247,10 @@ processRawFile(CommandLineOptions const &clo,
     bd::BlockingQueue<bd::Buffer<double> *> rmapFull;
     bd::BlockingQueue<bd::Buffer<double> *> rmapEmpty;
 
-    Reader<Ty> reader{ &rawEmpty, &rawFull };
+    Reader<Ty> reader{ &rawFull, &rawEmpty };
     std::future<uint64_t> reader_future;
 
-    Writer<double> writer{ &rmapEmpty, &rmapFull };
+    Writer<double> writer{ &rmapFull, &rmapEmpty };
     std::future<uint64_t> writer_future;
 
     size_t const nBuffTy{ 8 };
@@ -295,19 +304,21 @@ processRawFile(CommandLineOptions const &clo,
     tbb::task_scheduler_init
         init(clo.numThreads);
 
+    bd::Info() << "Begin working on shit.";
     while ((b = rawFull.pop()) != nullptr) {
 
       parallelBlockMinMax(volume, blocks, b);
 
       if (! skipRMap) {
-        bd::Buffer<double> *relBuf{ rmapFull.pop() };
+        bd::Buffer<double> *relBuf{ rmapEmpty.pop() };
         createRelMap(b, relFunc, relBuf, rmapfile);
-        rmapEmpty.push(relBuf);
+        rmapFull.push(relBuf);
       }
 
       rawEmpty.push(b);
 
     } // while
+    bd::Info() << "End working on shit.";
 
     bd::Buffer<double> emptyDouble(nullptr, 0);
 
