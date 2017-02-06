@@ -192,17 +192,17 @@ createRelMap(bd::Buffer<Ty> const *buf,
 
 template<class Ty>
 char*
-allocateEmptyBuffers(char *mem, size_t szMem,
-  bd::BlockingQueue<bd::Buffer<Ty> *> &empty, size_t nBuff)
+allocateEmptyBuffers(char *mem,
+  bd::BlockingQueue<bd::Buffer<Ty> *> &empty, size_t nBuff, size_t lenBuff)
 {
 
-    size_t const sz_buf{ szMem / nBuff };
-    size_t const count{ sz_buf / sizeof(Ty) };
+//    size_t const sz_buf{ szMem / nBuff };
+//    size_t const count{ sz_buf / sizeof(Ty) };
     Ty *p{ reinterpret_cast<Ty *>(mem) };
     for (size_t i{ 0 }; i < nBuff; ++i) {
-      bd::Buffer<Ty> *buf{ new bd::Buffer<Ty>(p, count) };
+      bd::Buffer<Ty> *buf{ new bd::Buffer<Ty>(p, lenBuff) };
       empty.push(buf);
-      p += count;
+      p += lenBuff;
     }
 
     return reinterpret_cast<char *>(p);
@@ -253,11 +253,23 @@ processRawFile(CommandLineOptions const &clo,
     Writer<double> writer{ &rmapFull, &rmapEmpty };
     std::future<uint64_t> writer_future;
 
+    // number of buffers for reading the raw file off disk.
+    // 8 is just an arbitrary number I chose.
     size_t const nBuffTy{ 8 };
-    size_t const nBuffDouble{ 4 };
+    // number of bytes for each of those buffers.
+    // clo.bufferSize/2 means we will use half of the total buffer space
+    // for the raw file buffers.
+    size_t const szBuffTy{ clo.bufferSize / 2 / nBuffTy };
+    // The length of each buffer, in elements
+    size_t const lenBuffTy{ szBuffTy / sizeof(Ty) };
+    size_t const szDouble{ szBuffTy * sizeof(double) / sizeof(Ty) };
+    size_t const nBuffDouble{ clo.bufferSize / 2 / szDouble };
+
+    assert(szDouble * nBuffDouble == szBuffTy * nBuffTy);
+
     char *mem{ new char[clo.bufferSize] };
-    mem = allocateEmptyBuffers<Ty>(mem, clo.bufferSize / 2, rawEmpty, nBuffTy);
-    allocateEmptyBuffers<double>(mem, clo.bufferSize / 2, rmapEmpty, nBuffDouble);
+    mem = allocateEmptyBuffers<Ty>(mem, rawEmpty, nBuffTy, lenBuffTy);
+    allocateEmptyBuffers<double>(mem, rmapEmpty, nBuffDouble, lenBuffTy);
 
     bd::OpacityTransferFunction trFunc{ };
     // If we are doing relevance mapping, then open rmap output file,
