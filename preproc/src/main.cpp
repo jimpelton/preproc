@@ -85,12 +85,8 @@ generateIndexFile(const CommandLineOptions &clo, bd::DataType type)
 //                 { clo.num_blks[0], clo.num_blks[1], clo.num_blks[2] }};
 
 
-
-
-
   bd::Info() << "Processing raw file.";
 
-  
 
   std::unique_ptr<bd::IndexFile> indexFile{ new bd::IndexFile() };
   indexFile->getVolume().voxelDims({ clo.vol_dims[0], clo.vol_dims[1], clo.vol_dims[2] });
@@ -100,7 +96,9 @@ generateIndexFile(const CommandLineOptions &clo, bd::DataType type)
   volumeMinMax<Ty>(clo.inFile, clo.bufferSize, clo.numThreads, indexFile->getVolume());
 
   indexFile->init(type);
-  processRawFile<Ty>(clo,
+
+  RFProc<Ty> proc;
+  proc.processRawFile(clo,
                      indexFile->getVolume(),
                      indexFile->getFileBlocks(),
                      clo.skipRmapGeneration);
