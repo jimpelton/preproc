@@ -72,6 +72,7 @@ public:
       std::streamsize amount{ is.gcount() };
       bytes_read += amount;
       buf->setNumElements(amount / sizeof(Ty));
+      buf->setIndexOffset(bytes_read / sizeof(Ty));
       bd::Dbg() << "Reader read " << bytes_read << " bytes";
       m_full->push(buf);
 

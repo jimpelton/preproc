@@ -98,10 +98,13 @@ generateIndexFile(const CommandLineOptions &clo, bd::DataType type)
   indexFile->init(type);
 
   RFProc<Ty> proc;
-  proc.processRawFile(clo,
+  int result = proc.processRawFile(clo,
                      indexFile->getVolume(),
                      indexFile->getFileBlocks(),
                      clo.skipRmapGeneration);
+  if (result != 0) {
+    throw std::runtime_error("Problem processing raw file.");
+  }
 
   if (!clo.skipRmapGeneration) {
     bd::Info() << "Processing relevance map.";

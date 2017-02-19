@@ -70,28 +70,28 @@ parallelBlockMinMax(bd::Volume const &volume,
 /// \param rawData the raw voxel values data.
 /// \param rmapData empty buffers to fill with relevance values
 /// \param relFunc relevance voxel classifier
-template<class Ty>
-void
-createRelMap(bd::Buffer<Ty> const *rawData,
-             bd::Buffer<double> *rmapData,
-             preproc::VoxelOpacityFunction<Ty> &relFunc)
-{
-
-  using Classifier =
-  bd::ParallelForVoxelClassifier<Ty,
-      preproc::VoxelOpacityFunction<Ty>,
-      double *>;
-
-  // The voxel classifier uses the opacity function to write the
-  // opacity to the rmap.
-  double *rmapPtr{ rmapData->getPtr() };
-  Classifier classifier{ rmapPtr, rawData, relFunc };
-
-  // Process this buffer in parallel with the classifier
-  tbb::blocked_range<size_t> range{ 0, rawData->getNumElements() };
-  tbb::parallel_for(range, classifier);
-
-} // createRelMap
+//template<class Ty>
+//void
+//createRelMap(bd::Buffer<Ty> const *rawData,
+//             bd::Buffer<double> *rmapData,
+//             preproc::VoxelOpacityFunction<Ty> &relFunc)
+//{
+//
+//  using Classifier =
+//  bd::ParallelForVoxelClassifier<Ty,
+//      preproc::VoxelOpacityFunction<Ty>,
+//      double *>;
+//
+//  // The voxel classifier uses the opacity function to write the
+//  // opacity to the rmap.
+//  double *rmapPtr{ rmapData->getPtr() };
+//  Classifier classifier{ rmapPtr, rawData, relFunc };
+//
+//  // Process this buffer in parallel with the classifier
+//  tbb::blocked_range<size_t> range{ 0, rawData->getNumElements() };
+//  tbb::parallel_for(range, classifier);
+//
+//} // createRelMap
 
 
 namespace
@@ -160,9 +160,9 @@ public:
 private:
 
   bool
-  procRmap(bd::Buffer<Ty> *rawData,
-                       preproc::VoxelOpacityFunction<Ty> &relFunc,
-                       bool no_rmap_buffs);
+  genRMapData(bd::Buffer<Ty> *rawData,
+              preproc::VoxelOpacityFunction<Ty> &relFunc,
+              bool no_rmap_buffs);
 
 //  char *
 //  allocateEmptyBuffers(char *mem,
@@ -237,7 +237,6 @@ RFProc<Ty>::processRawFile(CommandLineOptions const &clo,
       // how long is each buffer? It is based off of the number of rmap buffers
       // and the space allocated to rmap buffers.
       size_t const len_buffers{ size_t( (sz_total_rmap / num_rmap ) / sizeof(double) ) };
-
       size_t const sz_raw{ len_buffers * sizeof(Ty) };
       // how many raw buffs can we make of same length.
       size_t num_raw{ sz_total_raw / sz_raw };
@@ -251,7 +250,6 @@ RFProc<Ty>::processRawFile(CommandLineOptions const &clo,
 
     }
 
-    Reader<Ty>::start(reader, rawfile);
 
     bd::OpacityTransferFunction tr_func{ };
     // If we are doing relevance mapping, then open rmap output file,
@@ -273,16 +271,16 @@ RFProc<Ty>::processRawFile(CommandLineOptions const &clo,
       }
 
       Writer<double>::start(writer, rmapfile);
-
     } // if(! skipRMap)
-
+    Reader<Ty>::start(reader, rawfile);
 
     // set up the VoxelOpacityFunction
     preproc::VoxelOpacityFunction<Ty>
         rel_func{ tr_func, volume.min(), volume.max() };
 
-    tbb::task_scheduler_init init(clo.numThreads);
+//    tbb::task_scheduler_init init(clo.numThreads);
     loop(skipRMap, volume, blocks, rel_func);
+
     // push the quit buffer into the writer
     bd::Buffer<double> emptyDouble(nullptr, 0);
     rmapFull.push(&emptyDouble);
@@ -292,7 +290,6 @@ RFProc<Ty>::processRawFile(CommandLineOptions const &clo,
     writer.join();
     rmapfile.close();
     rawfile.close();
-
 
   } catch (std::runtime_error &e) {
     bd::Err() << "Exception in " << __func__ << ": " << e.what();
@@ -335,7 +332,7 @@ RFProc<Ty>::loop(bool skipRMap,
     parallelBlockMinMax(volume, blocks, rawData);
 
     if (!skipRMap) {
-      procRmap(rawData, relFunc, false);
+      genRMapData(rawData, relFunc, false);
     }
 
     rawEmpty.push(rawData);
@@ -348,9 +345,9 @@ RFProc<Ty>::loop(bool skipRMap,
 
 template<class Ty>
 bool
-RFProc<Ty>::procRmap(bd::Buffer<Ty> *rawData,
-                     preproc::VoxelOpacityFunction<Ty> &relFunc,
-                     bool no_rmap_buffs)
+RFProc<Ty>::genRMapData(bd::Buffer<Ty> *rawData,
+                        preproc::VoxelOpacityFunction<Ty> &relFunc,
+                        bool no_rmap_buffs)
 {
   bd::Buffer<double> *rmapData{ nullptr };
   rmapData = rmapEmpty.pop();
@@ -359,7 +356,18 @@ RFProc<Ty>::procRmap(bd::Buffer<Ty> *rawData,
     return false;
   }
 
-  createRelMap(rawData, rmapData, relFunc);
+//  createRelMap(rawData, rmapData, relFunc);
+  using Classifier = bd::ParallelForVoxelClassifier<Ty,
+      preproc::VoxelOpacityFunction<Ty>, double *>;
+
+  // The voxel classifier uses the opacity function to write the
+  // opacity to the rmap.
+  double *rmapPtr{ rmapData->getPtr() };
+  Classifier classifier{ rmapPtr, rawData, relFunc };
+
+  // Process this buffer in parallel with the classifier
+  tbb::blocked_range<size_t> range{ 0, rawData->getNumElements() };
+  tbb::parallel_for(range, classifier);
   rmapData->setNumElements(rawData->getNumElements());
   rmapFull.push(rmapData);
 

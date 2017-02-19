@@ -43,6 +43,8 @@ if(NOT DEFINED TBB_RELEASE_LIBRARIES)
 endif()
 set(TBB_RELEASE_LIBRARIES ${${TBB_RELEASE_LIBRARIES}} CACHE FILEPATH "Cruft library file (.a,.dylib,.lib).")
 
+add_definitions(-DTBB_USE_DEBUG=1)
+
 #### Definitions ##########################################################
 # Windows requires a few extra definitions.
 if (WIN32)
