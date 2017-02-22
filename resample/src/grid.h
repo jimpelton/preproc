@@ -6,8 +6,8 @@
 //
 // It has been changed a little bit to work for my situation.
 
-#ifndef RESAMPLE_GRID_H
-#define RESAMPLE_GRID_H
+#ifndef resample_grid_h
+#define resample_grid_h
 
 #include <cstddef>
 
@@ -27,6 +27,11 @@ public:
   const T *data;
 
 
+  ///
+  /// \param nvx Number of verts along x
+  /// \param nvy Number of verts along y
+  /// \param nvz Number of verts along z
+  /// \param data The data to resample.
   Grid(size_t nvx, size_t nvy, size_t nvz, const T *data)
       : nx(nvx)
       , ny(nvy)
@@ -42,6 +47,7 @@ public:
   }
 
 
+  /// Convert to 1d index
   size_t
   IX(size_t x, size_t y, size_t z)
   {
@@ -111,4 +117,4 @@ public:
 
 }
 
-#endif //RESAMPLE_GRID_H
+#endif // ! resample_grid_h
