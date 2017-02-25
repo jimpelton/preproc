@@ -4,6 +4,9 @@
 
 #include "grid.h"
 #include "cmdline.h"
+#include "resample.h"
+
+
 
 #include <bd/log/logger.h>
 #include <bd/volume/block.h>
@@ -92,44 +95,71 @@ computeSlabNumElements(size_t w, size_t h, size_t d, size_t target)
 
 
 
-
-template<class T>
-bool
-go(std::string const &rawFile, bd::IndexFile const &indexFile)
+void
+go(bd::DataType t)
 {
-
-
-}
-
-
-bool 
-runFromIndexFile(std::string const &rawFile, bd::IndexFile const &indexFile)
-{
-  bd::DataType type{ bd::IndexFileHeader::getType(indexFile.getHeader()) };
-  switch (type) {
-  case bd::DataType::Character:
-    go<int8_t>(rawFile, indexFile);
-    break;
-  case bd::DataType::UnsignedCharacter:
-    go<uint8_t>(rawFile, indexFile);
-    break;
-  case bd::DataType::Short:
-    go<int16_t>(rawFile, indexFile);
-    break;
-  case bd::DataType::UnsignedShort:
-    go<uint16_t>(rawFile, indexFile);
-    break;
-  case bd::DataType::Float:
-    go<float>(rawFile, indexFile);
-    break;
-  default:
-    bd::Err() << "Unsupported data type: " << bd::to_string(type);
-    return false;
+  switch(t)
+  {
+    case bd::DataType::Character:
+    {
+      Resample<int8_t> r;
+      break;
+    }
+    case bd::DataType::UnsignedCharacter:
+    {
+      Resample<uint8_t> r;
+      break;
+    }
+    case bd::DataType::Short:
+    {
+      Resample<int16_t> r;
+      break;
+    }
+    case bd::DataType::UnsignedShort:
+    {
+      Resample<uint16_t> r;
+      break;
+    }
+    case bd::DataType::Float:
+    {
+      Resample<float> r;
+      break;
+    }
+    case bd::default:
+      break;
   }
-
-  return true;
-  
 }
+
+
+
+//bool
+//runFromIndexFile(std::string const &rawFile, bd::IndexFile const &indexFile)
+//{
+//  bd::DataType type{ bd::IndexFileHeader::getType(indexFile.getHeader()) };
+//  switch (type) {
+//  case bd::DataType::Character:
+//    go<int8_t>(rawFile, indexFile);
+//    break;
+//  case bd::DataType::UnsignedCharacter:
+//    go<uint8_t>(rawFile, indexFile);
+//    break;
+//  case bd::DataType::Short:
+//    go<int16_t>(rawFile, indexFile);
+//    break;
+//  case bd::DataType::UnsignedShort:
+//    go<uint16_t>(rawFile, indexFile);
+//    break;
+//  case bd::DataType::Float:
+//    go<float>(rawFile, indexFile);
+//    break;
+//  default:
+//    bd::Err() << "Unsupported data type: " << bd::to_string(type);
+//    return false;
+//  }
+//
+//  return true;
+//
+//}
 
 } // namespace resample
 

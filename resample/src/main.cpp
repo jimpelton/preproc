@@ -48,10 +48,9 @@ int main(int argc, char const **argv)
       return 1;
     }
 
-    resample::runFromIndexFile(*(indexFile.get()));
+//    resample::runFromIndexFile();
 
-  }
-  else if (!cmdOpts.datFilePath.empty()) {
+  } else if (!cmdOpts.datFilePath.empty()) {
 
     // check given dat file exists
     std::ifstream datFile(cmdOpts.datFilePath, std::ios::binary);
@@ -69,10 +68,12 @@ int main(int argc, char const **argv)
     cmdOpts.dataType = dfd.dataType;
 
 
-
     size_t orig_c{ cmdOpts.vol_dims[0] }, new_c{ cmdOpts.new_vol_dims[0] }; // col
     size_t orig_r{ cmdOpts.vol_dims[1] }, new_r{ cmdOpts.new_vol_dims[1] }; // row
     size_t orig_s{ cmdOpts.vol_dims[2] }, new_s{ cmdOpts.new_vol_dims[2] }; // slab
+
+    resample::Resample::go(dfd.dataType);
+
 
     // read original data into memory
     inFile.seekg(0, std::ios::end);
