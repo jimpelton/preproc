@@ -5,12 +5,15 @@ project(resample CXX)
 
 
 
+find_package(Boost REQUIRED)
 #### T a r g e t  D e f  ###################################################
 add_subdirectory("src")
 add_executable(
         resample
         "${resample_HEADERS}"
-        "${resample_SOURCES}" )
+        "${resample_SOURCES}"
+        "${Boost_INCLUDE_DIRS}" )
+
 
 #link_directories("/usr/lib64/")
 target_link_libraries(resample
@@ -18,6 +21,7 @@ target_link_libraries(resample
         optimized ${CRUFT_RELEASE_LIBRARIES}
         debug ${TBB_DEBUG_LIBRARIES}
         optimized ${TBB_RELEASE_LIBRARIES}
+        ${Boost_LIBRARIES}
         )
 
 install(TARGETS resample RUNTIME DESTINATION "bin/")

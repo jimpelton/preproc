@@ -5,6 +5,7 @@
 #include "cmdline.h"
 
 #include <tclap/CmdLine.h>
+#include <boost/algorithm/string.hpp>
 
 #include <iostream>
 
@@ -70,14 +71,8 @@ try
 
 
   // target volume dims
-  TCLAP::ValueArg<size_t> x_dimTargetArg("", "tx", "Target x dim.", false, 1, "uint");
-  cmd.add(x_dimTargetArg);
-
-  TCLAP::ValueArg<size_t> y_dimTargetArg("", "ty", "Target y dim.", false, 1, "uint");
-  cmd.add(y_dimTargetArg);
-
-  TCLAP::ValueArg<size_t> z_dimTargetArg("", "tz", "Target z dim.", false, 1, "uint");
-  cmd.add(z_dimTargetArg);
+  TCLAP::ValueArg<std::string> dimTargetArg("", "--target-dims", "Target dims.", false, "1,1,1", "x,y,z");
+  cmd.add(dimTargetArg);
 
 
   // buffer size
@@ -93,6 +88,8 @@ try
   cmd.add(bufferSizeArg);
 
 
+  std::vector<uint64_t> dims = convertToList(dimTargetArg.getValue());
+
   opts.inFilePath = inFilePAthArg.getValue();
   opts.outFilePath = outFilePath.getValue();
   opts.datFilePath = datFileArg.getValue();
@@ -100,9 +97,9 @@ try
   opts.vol_dims[0] = x_dimArg.getValue();
   opts.vol_dims[1] = y_dimArg.getValue();
   opts.vol_dims[2] = z_dimArg.getValue();
-  opts.new_vol_dims[0] = x_dimTargetArg.getValue();
-  opts.new_vol_dims[1] = y_dimTargetArg.getValue();
-  opts.new_vol_dims[2] = z_dimTargetArg.getValue();
+  opts.new_vol_dims[0] = dims[0];
+  opts.new_vol_dims[1] = dims[1];
+  opts.new_vol_dims[2] = dims[2];
 
   return static_cast<int>(cmd.getArgList().size());
 
@@ -131,6 +128,21 @@ convertToBytes(std::string s)
   auto num = stoull(numPart);
 
   return num * multiplier;
+}
+
+std::vector<uint64_t>
+convertToList(std::string const &list)
+{
+  std::vector<std::string> split_vec;
+  std::vector<uint64_t> numbers;
+
+  boost::algorithm::split(split_vec, list, boost::algorithm::is_any_of(","));
+  for (std::string &s : split_vec) {
+    uint64_t v = std::strtoull(s.c_str(), nullptr, 10);
+    numbers.push_back(v);
+  }
+
+  return numbers;
 }
 
 void
