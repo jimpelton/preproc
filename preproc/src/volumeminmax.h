@@ -47,8 +47,6 @@ volumeMinMax(std::string const & path,
 
   bd::Buffer<Ty> *buf{ nullptr };
   
-  tbb::task_scheduler_init init(numThreads);
-
   while ((buf = r.waitNextFullUntilNone()) != nullptr) {
 
     tbb::blocked_range<size_t> range(0, buf->getNumElements());

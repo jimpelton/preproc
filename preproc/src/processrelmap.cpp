@@ -89,7 +89,7 @@ processRelMap(CommandLineOptions const &clo,
   }
   r.start();
 
-  tbb::task_scheduler_init init(clo.numThreads);
+//  tbb::task_scheduler_init init(clo.numThreads);
 
   // In parallel compute block statistics based on the RMap values.
   bd::Buffer<double> *buf{ nullptr };

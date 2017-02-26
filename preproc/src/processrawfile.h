@@ -144,6 +144,10 @@ public:
   }
 
 
+  /// \brief Create the relevance map in parallel based on the transfer function.
+  /// \param clo The command line options
+  /// \param tempOutFilePath Path that the temp RMap scratch file should be written to.
+  /// \throws std::runtime_error If the raw file could not be opened.
   int
   processRawFile(CommandLineOptions const &clo,
                  bd::Volume const &volume,
@@ -163,12 +167,6 @@ private:
   genRMapData(bd::Buffer<Ty> *rawData,
               preproc::VoxelOpacityFunction<Ty> &relFunc,
               bool no_rmap_buffs);
-
-//  char *
-//  allocateEmptyBuffers(char *mem,
-//                       bd::BlockingQueue<bd::Buffer<Ty> *> &empty,
-//                       size_t nBuff,
-//                       size_t lenBuff);
 
 
   std::ofstream rmapfile;
@@ -192,10 +190,6 @@ private:
 
 
 
-/// \brief Create the relevance map in parallel based on the transfer function.
-/// \param clo The command line options
-/// \param tempOutFilePath Path that the temp RMap scratch file should be written to.
-/// \throws std::runtime_error If the raw file could not be opened.
 template<class Ty>
 int
 RFProc<Ty>::processRawFile(CommandLineOptions const &clo,
@@ -278,7 +272,6 @@ RFProc<Ty>::processRawFile(CommandLineOptions const &clo,
     preproc::VoxelOpacityFunction<Ty>
         rel_func{ tr_func, volume.min(), volume.max() };
 
-    tbb::task_scheduler_init init(clo.numThreads);
     loop(skipRMap, volume, blocks, rel_func);
 
     // push the quit buffer into the writer

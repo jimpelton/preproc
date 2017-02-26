@@ -80,18 +80,13 @@ template<class Ty>
 void
 generateIndexFile(const CommandLineOptions &clo, bd::DataType type)
 {
-//  bd::FileBlockCollection<Ty>
-//      collection{{ clo.vol_dims[0], clo.vol_dims[1], clo.vol_dims[2] },
-//                 { clo.num_blks[0], clo.num_blks[1], clo.num_blks[2] }};
-
-
   bd::Info() << "Processing raw file.";
-
 
   std::unique_ptr<bd::IndexFile> indexFile{ new bd::IndexFile() };
   indexFile->getVolume().voxelDims({ clo.vol_dims[0], clo.vol_dims[1], clo.vol_dims[2] });
   indexFile->getVolume().block_count({ clo.num_blks[0], clo.num_blks[1], clo.num_blks[2] });
-  
+
+  tbb::task_scheduler_init init(clo.numThreads);
   bd::Info() << "Computing volume min/max.";
   volumeMinMax<Ty>(clo.inFile, clo.bufferSize, clo.numThreads, indexFile->getVolume());
 
@@ -141,7 +136,7 @@ generate(CommandLineOptions &clo)
 
   }
 
-  // Decide what data type we have and call execute to kick off the processing.
+  // Decide what data type we have and call generateIndexFile() to kick off the processing.
   bd::DataType type{ bd::to_dataType(clo.dataType) };
 
   switch (type) {
