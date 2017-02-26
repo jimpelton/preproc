@@ -317,7 +317,7 @@ RFProc<Ty>::loop(bool skipRMap,
                   preproc::VoxelOpacityFunction<Ty> &relFunc)
 {
 
-  bd::Info() << "Begin working on shit, skip_rmap = " << std::boolalpha << skipRMap;
+  bd::Info() << "Begin raw file processing, skip_rmap = " << std::boolalpha << skipRMap;
 
   bd::Buffer<Ty> *rawData{ nullptr };
 
@@ -338,7 +338,6 @@ RFProc<Ty>::loop(bool skipRMap,
     rawEmpty.push(rawData);
 
   } // while
-  bd::Info() << "End working on shit.";
 
 }
 

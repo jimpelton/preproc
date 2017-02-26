@@ -7,8 +7,10 @@
 
 #include <bd/io/datatypes.h>
 
+#include <boost/algorithm/string.hpp>
 #include <cstdint>
 #include <string>
+#include <vector>
 
 namespace resample
 {
@@ -36,6 +38,8 @@ namespace resample
 
 size_t convertToBytes(std::string s);
 
+std::vector<uint64_t>
+convertToList(std::string const &list);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// \brief Parses command line args and populates \c opts.
