@@ -17,6 +17,12 @@
 
 
 
+/// Open the raw data file at \c path and compute the min, max and average values.
+/// \tparam Ty The data type of the voxel elements in the volume.
+/// \param path The path to the file.
+/// \param szbuf Size of buffer (in bytes) to allocate.
+/// \param numThreads Number of tbb threads to use for processing.
+/// \param volume The volume to use for storing the results in.
 template<typename Ty>
 void
 volumeMinMax(std::string const & path,

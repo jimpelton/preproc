@@ -108,11 +108,12 @@ Resample<Ty>::operator()(std::string const &rawFile,
 
   m_mem = new char[memSize];
   {
-    size_t const num_b{ 4 };
+    size_t const num_b{ 20 };
     double r{ 0.0 };
     if (areUpsampling(src, dest)) {
       // up sampling, more memory to dest buffers
       r = ratio(src, dest);
+
     } else {
       //down sampling, more memory to src buffers
       r = ratio(dest, src);
@@ -130,6 +131,7 @@ Resample<Ty>::operator()(std::string const &rawFile,
     // how many raw buffs can we make of same length.
     size_t num_small{ sz_total_small / sz_small };
 
+    if (areUpsampling(src,dest))
     char *mem = allocateBuffers(m_mem, m_rawEmpty, num_small, len_buffers);
     allocateBuffers(mem, m_resampEmpty, num_rmap, len_buffers);
 

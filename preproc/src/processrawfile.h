@@ -48,17 +48,17 @@ parallelBlockMinMax(bd::Volume const &volume,
   tbb::parallel_reduce(range, minMax);
   bd::MinMaxPairDouble const *pairs{ minMax.pairs() };
   for (size_t i{ 0 }; i < blocks.size(); ++i) {
-    bd::FileBlock &b = blocks[i];
+    bd::FileBlock *b = &blocks[i];
 
-    if (b.min_val > pairs[i].min) {
-      b.min_val = pairs[i].min;
+    if (b->min_val > pairs[i].min) {
+      b->min_val = pairs[i].min;
     }
 
-    if (b.max_val < pairs[i].max) {
-      b.max_val = pairs[i].max;
+    if (b->max_val < pairs[i].max) {
+      b->max_val = pairs[i].max;
     }
 
-    b.total_val += pairs[i].total;
+    b->total_val += pairs[i].total;
   }
 
 
@@ -221,7 +221,7 @@ RFProc<Ty>::processRawFile(CommandLineOptions const &clo,
 
     m_mem = new char[clo.bufferSize];
     {
-      size_t const num_rmap{ 4 };
+      size_t const num_rmap{ 16 };
       double ratio{ 0.0 };
       if (sizeof(Ty) == sizeof(double)) {
         ratio = 0.5;
@@ -278,7 +278,7 @@ RFProc<Ty>::processRawFile(CommandLineOptions const &clo,
     preproc::VoxelOpacityFunction<Ty>
         rel_func{ tr_func, volume.min(), volume.max() };
 
-//    tbb::task_scheduler_init init(clo.numThreads);
+    tbb::task_scheduler_init init(clo.numThreads);
     loop(skipRMap, volume, blocks, rel_func);
 
     // push the quit buffer into the writer
