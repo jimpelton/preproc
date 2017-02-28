@@ -20,6 +20,7 @@ class VoxelOpacityFunction
 public:
   /// \brief Create a filter based on the given opacity function.
   /// \note Scalars in OpacityKnots should be normalized data values.
+  /// \note Makes a copy of \c function
   VoxelOpacityFunction(bd::OpacityTransferFunction const &function,
                        double const dataMin,
                        double const dataMax)

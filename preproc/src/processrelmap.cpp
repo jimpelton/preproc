@@ -28,14 +28,15 @@ parallelCountBlockEmptyVoxels(bd::Buffer<double> const *buf,
 {
   // if the relevance value from the rmap is in
   // [voxelOpacityRel_Min .. voxelOpacityRel_Max] then it is relevant.
-  auto relevanceFunction = [&](double x) -> bool {
-      return x >= clo.voxelOpacityRel_Min && x <= clo.voxelOpacityRel_Max;
-    };
+  auto relevanceFunction =
+      [&](double x) -> bool
+      {
+        return x >= clo.voxelOpacityRel_Min && x <= clo.voxelOpacityRel_Max;
+      };
 
+  using Classifier = bd::ParallelReduceBlockEmpties<double, decltype(relevanceFunction)>;
 
-  // parallel_reduce body
-  bd::ParallelReduceBlockEmpties<double, decltype(relevanceFunction)>
-    empties{ buf, &volume, relevanceFunction };
+  Classifier empties{ buf, &volume, relevanceFunction };
 
 
   // count the voxels in parallel
@@ -49,16 +50,23 @@ parallelCountBlockEmptyVoxels(bd::Buffer<double> const *buf,
     bd::FileBlock *b{ &blocks[i] };
     b->empty_voxels += emptyCounts[i];
   }
+
 } // parallelCountBlockEmptyVoxels()
 
 
 ///////////////////////////////////////////////////////////////////////////////
+///
+/// \param buf
+/// \param clo
+/// \param volume
+/// \param blocks
 void
 parallelSumBlockRelevances(bd::Buffer<double> const *buf,
                            CommandLineOptions const &clo,
                            bd::Volume &volume,
                            std::vector<bd::FileBlock> &blocks)
 {
+
   bd::ParallelReduceBlockRov rov{ buf, &volume };
   tbb::blocked_range<size_t> range{ 0, buf->getNumElements() };
   tbb::parallel_reduce(range, rov);
@@ -111,15 +119,15 @@ processRelMap(CommandLineOptions const &clo,
   //    b.rov /= double(totalvox); //double(b.empty_voxels);
   //  }
 
-  std::for_each(blocks.begin(),
-                blocks.end(),
-                [&clo](bd::FileBlock &b) -> void {
-                  if (b.rov >= clo.blockThreshold_Min && b.rov <= clo.blockThreshold_Max) {
-                    b.is_empty = 0;
-                  } else {
-                    b.is_empty = 1;
-                  }
-                });
+//  std::for_each(blocks.begin(),
+//                blocks.end(),
+//                [&clo](bd::FileBlock &b) -> void {
+//                  if (b.rov >= clo.blockThreshold_Min && b.rov <= clo.blockThreshold_Max) {
+//                    b.is_empty = 0;
+//                  } else {
+//                    b.is_empty = 1;
+//                  }
+//                });
 
   auto minmaxE =
     std::minmax_element(blocks.begin(),

@@ -49,9 +49,9 @@ struct CommandLineOptions
   // number of threads
   int numThreads;
   // threshold max
-  double blockThreshold_Max;
-  // threshold minimum
-  double blockThreshold_Min;
+//  double blockThreshold_Max;
+//  // threshold minimum
+//  double blockThreshold_Min;
   // voxel opacity thresh min
   double voxelOpacityRel_Min;
   // voxel opacity thresh max

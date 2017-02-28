@@ -160,28 +160,28 @@ try
                     sixty_four_megs, "uint");
   cmd.add(bufferSizeArg);
 
-
-  // block ratio of visibility threshold min
-  TCLAP::ValueArg<float>
-      blockROV_Min_Arg("", "block-rov-min",
-                       "Block ratio-of-visibility min.\n"
-                           "Values: [MIN_FLOAT - MAX_FLOAT] < block-rov-max.\n"
-                           "Default: MIN_FLOAT",
-                       false,
-                       std::numeric_limits<float>::lowest(), "float");
-  cmd.add(blockROV_Min_Arg);
-
-
-  // block ratio of visibility threshold max
-  TCLAP::ValueArg<float>
-      blockROV_Max_Arg("",
-                       "block-rov-max",
-                       "Block ratio-of-visibility max.\n"
-                           "Values: [MIN_FLOAT - MAX_FLOAT] > block-rov-min.\n"
-                           "Default: MAX_FLOAT",
-                       false,
-                       std::numeric_limits<float>::max(), "float");
-  cmd.add(blockROV_Max_Arg);
+//
+//  // block ratio of visibility threshold min
+//  TCLAP::ValueArg<float>
+//      blockROV_Min_Arg("", "block-rov-min",
+//                       "Block ratio-of-visibility min.\n"
+//                           "Values: [MIN_FLOAT - MAX_FLOAT] < block-rov-max.\n"
+//                           "Default: MIN_FLOAT",
+//                       false,
+//                       std::numeric_limits<float>::lowest(), "float");
+//  cmd.add(blockROV_Min_Arg);
+//
+//
+//  // block ratio of visibility threshold max
+//  TCLAP::ValueArg<float>
+//      blockROV_Max_Arg("",
+//                       "block-rov-max",
+//                       "Block ratio-of-visibility max.\n"
+//                           "Values: [MIN_FLOAT - MAX_FLOAT] > block-rov-min.\n"
+//                           "Default: MAX_FLOAT",
+//                       false,
+//                       std::numeric_limits<float>::max(), "float");
+//  cmd.add(blockROV_Max_Arg);
 
 
   // voxel opacity relevance threshold
@@ -266,8 +266,8 @@ try
   opts.num_blks[2] = zBlocksArg.getValue();
   opts.bufferSize = convertToBytes(bufferSizeArg.getValue());
   opts.numThreads = numThreadsArg.getValue();
-  opts.blockThreshold_Min = blockROV_Min_Arg.getValue();
-  opts.blockThreshold_Max = blockROV_Max_Arg.getValue();
+//  opts.blockThreshold_Min = blockROV_Min_Arg.getValue();
+//  opts.blockThreshold_Max = blockROV_Max_Arg.getValue();
   opts.voxelOpacityRel_Max = voxelOpacityRelevance_Max_Arg.getValue();
   opts.voxelOpacityRel_Min = voxelOpacityRelevance_Min_Arg.getValue();
 //  opts.volMin = volMinArg.getValue();
@@ -339,9 +339,9 @@ operator<<(std::ostream &os, const CommandLineOptions &opts)
      << opts.num_blks[2]
      << "\n" "Buffer Size: "
      << opts.bufferSize << " bytes."
-     << "\n" "Block ratio of vis. min/max: "
-     << opts.blockThreshold_Min << " - "
-     << opts.blockThreshold_Max
+//     << "\n" "Block ratio of vis. min/max: "
+//     << opts.blockThreshold_Min << " - "
+//     << opts.blockThreshold_Max
      << "\n" "Voxel opacity rel. min/max: "
      << opts.voxelOpacityRel_Min << " - "
      << opts.voxelOpacityRel_Max

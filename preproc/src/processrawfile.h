@@ -10,7 +10,7 @@
 
 #include <bd/io/indexfile.h>
 #include <bd/log/logger.h>
-#include <bd/tbb/parallelfor_voxelclassifier.h>
+#include <bd/tbb/parallelfor_voxelrelevance.h>
 #include <bd/volume/transferfunction.h>
 #include <bd/tbb/parallelreduce_blockminmax.h>
 #include <bd/io/bufferpool.h>
@@ -349,17 +349,17 @@ RFProc<Ty>::genRMapData(bd::Buffer<Ty> *rawData,
   }
 
 //  createRelMap(rawData, rmapData, relFunc);
-  using Classifier = bd::ParallelForVoxelClassifier<Ty,
+  using Relevance = bd::ParallelForVoxelRelevance<Ty,
       preproc::VoxelOpacityFunction<Ty>, double *>;
 
   // The voxel classifier uses the opacity function to write the
   // opacity to the rmap.
   double *rmapPtr{ rmapData->getPtr() };
-  Classifier classifier{ rmapPtr, rawData, relFunc };
+  Relevance relevance{ rmapPtr, rawData, relFunc };
 
   // Process this buffer in parallel with the classifier
   tbb::blocked_range<size_t> range{ 0, rawData->getNumElements() };
-  tbb::parallel_for(range, classifier);
+  tbb::parallel_for(range, relevance);
   rmapData->setNumElements(rawData->getNumElements());
   rmapFull.push(rmapData);
 
