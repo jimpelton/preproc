@@ -258,7 +258,10 @@ RFProc<Ty>::processRawFile(CommandLineOptions const &clo,
       }
 
       // Generate the transfer function
-      tr_func.load(clo.tfuncPath);
+      if (tr_func.load(clo.tfuncPath) < 0) {
+        bd::Err() << "Error reading transfer function.";
+        return -1;
+      }
       if (tr_func.getNumKnots() == 0) {
         bd::Err() << "Transfer function has size 0.";
         return -1;
