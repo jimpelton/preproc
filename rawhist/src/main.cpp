@@ -25,18 +25,19 @@ namespace rawhist
 namespace
 {
 int const nBuckets{ 1536 };
-int histcount[nBuckets];
+int const MAX_IDX{ nBuckets - 1 };
+long long histcount[nBuckets];
 double histmin[nBuckets];
 double histmax[nBuckets];
 long long totalcount{ 0 };
-float rawmin{ 0 };
-float rawmax{ 0 };
+double rawmin{ 0 };
+double rawmax{ 0 };
 
 } // namespace
 
 
 template<typename Ty>
-void volumeMinMax(std::string const &path, size_t szbuf, float* volMin, float* volMax)
+void volumeMinMax(std::string const &path, size_t szbuf, double* volMin, double* volMax)
 {
   bd::BufferedReader<Ty> r{ szbuf };
   if (!r.open(path)) {
@@ -94,28 +95,52 @@ void hist(std::string const &fileName, size_t szbuf, float rawmin, float rawmax)
   while ((buf = r.waitNextFullUntilNone()) != nullptr) {
 
 
-    tbb::blocked_range<size_t> range(0, buf->getNumElements());
-    bd::ParallelReduceHistogram<Ty> histo(buf,
-                                          static_cast<Ty>(rawmin), 
-                                          static_cast<Ty>(rawmax) );
-    tbb::parallel_reduce(range, histo);
+//    tbb::blocked_range<size_t> range(0, buf->getNumElements());
+//    bd::ParallelReduceHistogram<Ty> histo(buf,
+//                                          static_cast<Ty>(rawmin),
+//                                          static_cast<Ty>(rawmax) );
+//    tbb::parallel_reduce(range, histo);
+
+    Ty const * p{ buf->getPtr() };
+
+    for (size_t i{ 0 }; i < buf->getNumElements(); ++i) {
+
+      Ty val = p[i];
+
+      long long idx{
+          static_cast<long long>((val - rawmin)/(rawmax - rawmin) * float(MAX_IDX) + 0.5f) };
+
+      if (idx > MAX_IDX)
+        idx = MAX_IDX;
+
+      histcount[idx] += 1;
+
+      if (histmin[idx] > val) {
+        histmin[idx] = val;
+      }
+      if (histmax[idx] < val) {
+        histmax[idx] = val;
+      }
+
+    }
+
+    totalcount += buf->getNumElements();
+    r.waitReturnEmpty(buf);
 
 
     // Accumulate this buffer's histo
-    for (size_t i{ 0 }; i < nBuckets; ++i) {
-      histcount[i] += histo.getBuckets()[i];
+//    for (size_t i{ 0 }; i < nBuckets; ++i) {
+//      histcount[i] += histo.getBuckets()[i];
+//
+//      if (histo.getHistMin()[i] < histmin[i])
+//        histmin[i] = histo.getHistMin()[i];
+//
+//      if (histo.getHistMax()[i] > histmax[i])
+//        histmax[i] = histo.getHistMax()[i];
+//    }
 
-      if (histo.getHistMin()[i] < histmin[i])
-        histmin[i] = histo.getHistMin()[i];
-
-      if (histo.getHistMax()[i] > histmax[i])
-        histmax[i] = histo.getHistMax()[i];
-    }
 
 
-    totalcount += histo.getTotalCount();
-
-    r.waitReturnEmpty(buf);
 
   } // while
 
@@ -142,10 +167,10 @@ void printHisto(std::ostream &os)
   os << "#Index Perc Offset Min Max\n";
   double pindex = 0;
   for (int i = 0; i < nBuckets; i++) {
-    double pcount = (double)histcount[i] / totalcount;
+    double pcount = (double)histcount[i] / (double)totalcount;
     if (histcount[i] != 0) {
-      os << std::left << std::setw(5) << i << std::left << std::setw(20) << pcount << std::left << std::setw(20) << pindex
-        << std::left << std::setw(20) << histmin[i] << std::left << std::setw(20) << histmax[i] << '\n';
+      os << std::left << std::setw(5) << i << std::left << std::setw(20) << std::setprecision(12) << pcount << std::left << std::setw(20) << std::setprecision(12) << pindex
+        << std::left << std::setw(20) << std::setprecision(12) << histmin[i] << std::left << std::setw(20) << std::setprecision(12) << histmax[i] << '\n';
     }
     else {
       os << std::left << std::setw(5) << i << std::left << std::setw(20) << 0.0 << std::left << std::setw(20) << pindex
