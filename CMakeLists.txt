@@ -17,33 +17,26 @@ if(NOT DEFINED CRUFT_INCLUDE_DIR)
 endif()
 set(CRUFT_INCLUDE_DIR ${${CRUFT_INCLUDE_DIR}} CACHE PATH "Cruft includes directory path")
 
-if(NOT DEFINED CRUFT_DEBUG_LIBRARIES)
-    set(CRUFT_DEBUG_LIBRARIES)
+if(NOT DEFINED CRUFT_LIBRARIES)
+    set(CRUFT_LIBRARIES)
 endif()
-set(CRUFT_DEBUG_LIBRARIES ${${CRUFT_DEBUG_LIBRARIES}} CACHE FILEPATH "Cruft library file (.a,.dylib,.lib).")
+set(CRUFT_LIBRARIES ${${CRUFT_LIBRARIES}} CACHE FILEPATH "Cruft library file (.a,.dylib,.lib).")
 
-if(NOT DEFINED CRUFT_RELEASE_LIBRARIES)
-    set(CRUFT_RELEASE_LIBRARIES)
-endif()
-set(CRUFT_RELEASE_LIBRARIES ${${CRUFT_RELEASE_LIBRARIES}} CACHE FILEPATH "Cruft library file (.a,.dylib,.lib).")
 
 #### Intel TBB Library ##################################################
 if(NOT DEFINED TBB_INCLUDE_DIR)
     set(TBB_INCLUDE_DIR)
 endif()
-set(TBB_INCLUDE_DIR ${${TBB_INCLUDE_DIR}} CACHE PATH "Cruft includes directory path")
+set(TBB_INCLUDE_DIR ${${TBB_INCLUDE_DIR}} CACHE PATH "TBB includes directory path")
 
-if(NOT DEFINED TBB_DEBUG_LIBRARIES)
-    set(TBB_DEBUG_LIBRARIES)
+if(NOT DEFINED TBB_LIBRARIES)
+    set(TBB_LIBRARIES)
 endif()
-set(TBB_DEBUG_LIBRARIES ${${TBB_DEBUG_LIBRARIES}} CACHE FILEPATH "Cruft library file (.a,.dylib,.lib).")
+set(TBB_LIBRARIES ${${TBB_LIBRARIES}} CACHE FILEPATH "TBB library file (.a,.dylib,.lib).")
 
-if(NOT DEFINED TBB_RELEASE_LIBRARIES)
-    set(TBB_RELEASE_LIBRARIES)
+if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug") 
+    add_definitions(-DTBB_USE_DEBUG=1)
 endif()
-set(TBB_RELEASE_LIBRARIES ${${TBB_RELEASE_LIBRARIES}} CACHE FILEPATH "Cruft library file (.a,.dylib,.lib).")
-
-add_definitions(-DTBB_USE_DEBUG=1)
 
 #### Definitions ##########################################################
 # Windows requires a few extra definitions.
@@ -59,7 +52,6 @@ if (UNIX)
 endif (UNIX)
 
 
-
 #### T h i r d   P a r t y  ################################################
 find_package(GLM REQUIRED)
 
@@ -71,8 +63,8 @@ include_directories(
 )
 
 
-
 add_subdirectory(preproc)
 add_subdirectory(rawhist)
 add_subdirectory(resample)
 add_subdirectory(gmag)
+

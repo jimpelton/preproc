@@ -28,15 +28,8 @@ add_executable(rawhist "${rawhist_HEADERS}" "${rawhist_SOURCES}")
 # Linker
 
 target_link_libraries(rawhist
-#        ${OPENGL_LIBRARIES}
-#        ${GLFW_LIBRARIES}
-#        ${GLEW_LIBRARIES}
-        debug ${CRUFT_DEBUG_LIBRARIES}
-        optimized ${CRUFT_RELEASE_LIBRARIES}
-#        ${NVTOOLSEXT_LIB}
-        debug ${TBB_DEBUG_LIBRARIES}
-        optimized ${TBB_RELEASE_LIBRARIES}
-#            /usr/local/lib/libtbb.dylib
+        ${CRUFT_LIBRARIES}
+        ${TBB_LIBRARIES}
         )
 
 ################################################################################

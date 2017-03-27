@@ -28,14 +28,7 @@ add_executable(gmag "${gmag_HEADERS}" "${gmag_SOURCES}")
 # Linker
 
 target_link_libraries(gmag
-#        ${OPENGL_LIBRARIES}
-#        ${GLFW_LIBRARIES}
-#        ${GLEW_LIBRARIES}
-        debug ${CRUFT_DEBUG_LIBRARIES}
-        optimized ${CRUFT_RELEASE_LIBRARIES}
-#        ${NVTOOLSEXT_LIB}
-#       debug ${TBB_DEBUG_LIBRARIES}
-#       optimized ${TBB_RELEASE_LIBRARIES}
+        ${CRUFT_LIBRARIES}
         )
 
 ################################################################################

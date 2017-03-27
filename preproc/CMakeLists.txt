@@ -15,10 +15,8 @@ add_executable(
 
 link_directories("/usr/lib64/")
 target_link_libraries(preproc
-        debug ${CRUFT_DEBUG_LIBRARIES}
-        optimized ${CRUFT_RELEASE_LIBRARIES}
-        debug ${TBB_DEBUG_LIBRARIES}
-        optimized ${TBB_RELEASE_LIBRARIES}
+        ${CRUFT_LIBRARIES}
+        ${TBB_LIBRARIES}
         )
 
 install(TARGETS preproc RUNTIME
