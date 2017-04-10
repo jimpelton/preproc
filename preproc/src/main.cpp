@@ -166,8 +166,9 @@ void
 convert(CommandLineOptions &clo)
 {
 
+  bool success;
   std::unique_ptr<bd::IndexFile> index{
-      bd::IndexFile::fromBinaryIndexFile(clo.inFile) };
+      bd::IndexFile::fromBinaryIndexFile(clo.inFile, success) };
 
   if (clo.printBlocks) {
 
