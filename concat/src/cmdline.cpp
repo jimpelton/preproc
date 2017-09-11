@@ -53,19 +53,19 @@ try
 
   // target volume X dimension voxels
   TCLAP::ValueArg<int>
-    targetXDimArg("tx", "target-x", "Target X dimension", true, 0, "int");
+    targetXDimArg("", "tx", "Target X dimension", true, 0, "int");
   cmd.add(targetXDimArg);
 
 
   // target volume Y dimension voxels
   TCLAP::ValueArg<int>
-    targetYDimArg("ty", "target-y", "Target Y dimension", true, 0, "int");
+    targetYDimArg("", "ty", "Target Y dimension", true, 0, "int");
   cmd.add(targetYDimArg);
 
 
   // target volume Z dimension voxels
   TCLAP::ValueArg<int>
-    targetZDimArg("tz", "target-z", "Target Z dimension", true, 0, "int");
+    targetZDimArg("", "tz", "Target Z dimension", true, 0, "int");
   cmd.add(targetZDimArg);
 
 
