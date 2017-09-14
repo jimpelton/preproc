@@ -8,6 +8,7 @@
 #include <bd/log/logger.h>
 #include <bd/io/datfile.h>
 #include <glm/glm.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 #include <iostream>
 #include <array>
@@ -40,28 +41,26 @@ namespace concat
     size_t
     nextRow(Ty *buf)
     {
-      if (m_currentRow == m_totalRows) {
-        std::cout << "\nNo rows left." << std::endl;
+      if (m_currentRow == m_dims.y) {
+        //std::cout << "\nNo rows left." << std::endl;
         return 0;
       }
-      
+
       if (m_in->read(reinterpret_cast<char*>(buf), m_rowBytes)) {
         m_currentRow++;
-        auto amount = m_in->tellg() - m_cpos;
-        m_cpos = m_in->tellg();
-        return amount;
+        return m_in->gcount();
       }
-
       return 0;
     }
 
     void
-    seekToSlab(size_t slab) const {
-      m_in->seekg(slab * m_dims.x * m_dims.y * sizeof(Ty));
+    seekToSlab(size_t slab) {
+      m_in->seekg(slab * m_dims.x * m_dims.y * sizeof(Ty), m_in->beg);
+      m_currentRow = 0;
     }
 
   private:
-    
+
     std::unique_ptr<std::istream> m_in;
     glm::u64vec3 const m_dims;
     size_t const m_rowBytes;
@@ -93,9 +92,9 @@ namespace concat
       if (m_inBuffer != nullptr) {
         delete m_inBuffer;
       }
-    /*  if (m_outBuffer != nullptr) {
-        delete m_outBuffer;
-      }*/
+      /*  if (m_outBuffer != nullptr) {
+          delete m_outBuffer;
+        }*/
     }
 
     void
@@ -103,44 +102,45 @@ namespace concat
     {
       m_inBuffer = new Ty[m_inDims.x];
 
-      std::unique_ptr<std::ifstream> inFile{ 
+      std::unique_ptr<std::ifstream> inFile{
         new std::ifstream{ m_inName, std::ios::binary } };
 
-      if (! inFile->is_open()) {
+      if (!inFile->is_open()) {
         std::cerr << "Could not open input file: " << m_inName << std::endl;
         return;
       }
       RowReader<Ty> rr(std::move(inFile), m_inDims);
 
       std::ofstream outFile{ m_outName, std::ios::binary };
-      if (! outFile.is_open()) {
+      if (!outFile.is_open()) {
         std::cerr << "Could not open output file: " << m_outName << std::endl;
         return;
       }
 
       glm::u64vec3 concats{ m_outDims / m_inDims };
+      std::cout << "Number of concats: " << glm::to_string(concats) << std::endl;
+      std::cout << "Final dimensions: " << glm::to_string(concats * m_inDims) << std::endl;
       size_t totalRead{ 0 };
       size_t read{ 0 };
 
       for (size_t cz = 0; cz < concats.z; ++cz) {
         // seek to start of file
         //rr.seekToSlab(0);
-        size_t s{ 0 };
-        for (size_t cy = 0; cy < concats.y; ++cy) {
-          // seek to start of slab cy
-          rr.seekToSlab(s++);
-          size_t r{ 0 };
-          // write out slab cy, reading row by row.
-          while ((read = rr.nextRow(m_inBuffer)) > 0 && r < m_inDims.y) {
-            totalRead += read;
-            // write this row x number of times
-            for (size_t cx = 0; cx < concats.x; ++cx) {
-              outFile.write(reinterpret_cast<char*>(m_inBuffer), read);
-              std::cout << '\r' << "Bytes read: " << totalRead << ", bytes written: " << outFile.tellp() << " bytes.";
-            }
-            r++;
-          } // while
-        } // for cy
+        for (size_t slab = 0; slab < m_inDims.z; ++slab) {
+          for (size_t cy = 0; cy < concats.y; ++cy) {
+            // seek to start of slab cy
+            // write out slab cy, reading row by row.
+            rr.seekToSlab(slab);
+            while ((read = rr.nextRow(m_inBuffer)) > 0) {
+              totalRead += read;
+              // write this row x number of times
+              for (size_t cx = 0; cx < concats.x; ++cx) {
+                outFile.write(reinterpret_cast<char*>(m_inBuffer), read);
+                std::cout << '\r' << "Bytes read: " << totalRead << ", bytes written: " << outFile.tellp() << " bytes.";
+              }
+            } // while
+          } // for cy
+        }
       }
     }
 
@@ -150,17 +150,17 @@ namespace concat
     std::string const m_outName;
     glm::u64vec3 const m_inDims;
     glm::u64vec3 const m_outDims;
-    
+
     Ty *m_inBuffer;
 
   }; // class Concatenator
 
-  
+
 
 
   template<class Ty>
   void
-  doConcat(CommandLineOptions const &clo, bd::DatFileData const &dat)
+    doConcat(CommandLineOptions const &clo, bd::DatFileData const &dat)
   {
     Concatenator<Ty> cc{
       clo.rawFilePath,
@@ -171,7 +171,7 @@ namespace concat
 
     cc.concat();
     std::cout << "Done concatenating!" << std::endl;
-    
+
   }
 
 
@@ -190,7 +190,7 @@ main(int argc, const char *argv[])
   }
 
   bd::DatFileData datFile;
-  if (! bd::parseDat(clo.datFilePath, datFile) ) {
+  if (!bd::parseDat(clo.datFilePath, datFile)) {
     std::cerr << "Could not open .dat file " << clo.datFilePath << std::endl;
     return 1;
   }
