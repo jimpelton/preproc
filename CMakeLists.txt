@@ -45,7 +45,7 @@ if (WIN32)
 endif (WIN32)
 
 if (UNIX)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall \
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall \
     -Wno-missing-braces \
    -fdiagnostics-color=auto \
     -pthread" )
@@ -53,13 +53,19 @@ endif (UNIX)
 
 
 #### T h i r d   P a r t y  ################################################
+
+#set(Boost_USE_STATIC_LIBS ON)
+#set(Boost_USE_MULTITHREADED ON)
+
 find_package(GLM REQUIRED)
+find_package(Boost REQUIRED COMPONENTS system filesystem)
 
 include_directories(
         "${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/tclap/include"
         "${GLM_INCLUDE_DIRS}"
         "${CRUFT_INCLUDE_DIR}"
         "${TBB_INCLUDE_DIR}"
+        "${Boost_INCLUDE_DIR}"
 )
 
 

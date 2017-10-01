@@ -12,11 +12,11 @@ add_executable(
         preproc
         "${preproc_HEADERS}"
         "${preproc_SOURCES}" )
-
-link_directories("/usr/lib64/")
+#link_directories("/usr/lib64/")
 target_link_libraries(preproc
         ${CRUFT_LIBRARIES}
         ${TBB_LIBRARIES}
+        ${Boost_LIBRARIES}
         )
 
 install(TARGETS preproc RUNTIME

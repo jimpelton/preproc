@@ -169,21 +169,18 @@ private:
               bool no_rmap_buffs);
 
 
-  std::ofstream rmapfile;
-  std::ifstream rawfile;
+  std::ofstream m_rmapfile;
+  std::ifstream m_rawfile;
 
-  bd::BlockingQueue<bd::Buffer<Ty> *> rawFull;
-  bd::BlockingQueue<bd::Buffer<Ty> *> rawEmpty;
-  bd::BlockingQueue<bd::Buffer<double> *> rmapFull;
-  bd::BlockingQueue<bd::Buffer<double> *> rmapEmpty;
+  bd::BlockingQueue<bd::Buffer<Ty> *> m_rawFull;
+  bd::BlockingQueue<bd::Buffer<Ty> *> m_rawEmpty;
+  bd::BlockingQueue<bd::Buffer<double> *> m_rmapFull;
+  bd::BlockingQueue<bd::Buffer<double> *> m_rmapEmpty;
 
-  Reader<Ty> reader;
-  Writer<double> writer;
+  Reader<Ty> m_reader;
+  Writer<double> m_writer;
 
   char *m_mem;
-
-//  std::future<uint64_t> reader_future;
-//  std::future<uint64_t> writer_future;
 
 };
 
@@ -202,16 +199,16 @@ RFProc<Ty>::processRawFile(CommandLineOptions const &clo,
     // It is only as large as a single buffer from the reader
     // and is flushed to disk after each buffer is analyzed.
 
-    rawfile.open(clo.inFile, std::ios::binary);
-    if (!rawfile.is_open()) {
+    m_rawfile.open(clo.inFile, std::ios::binary);
+    if (!m_rawfile.is_open()) {
       bd::Err() << "Could not open file " + clo.inFile;
       return -1;
     }
 
-    reader.setFull(&rawFull);
-    reader.setEmpty(&rawEmpty);
-    writer.setFull(&rmapFull);
-    writer.setEmpty(&rmapEmpty);
+    m_reader.setFull(&m_rawFull);
+    m_reader.setEmpty(&m_rawEmpty);
+    m_writer.setFull(&m_rmapFull);
+    m_writer.setEmpty(&m_rmapEmpty);
 
     m_mem = new char[clo.bufferSize];
     {
@@ -230,13 +227,13 @@ RFProc<Ty>::processRawFile(CommandLineOptions const &clo,
       size_t const sz_total_rmap{ clo.bufferSize - sz_total_raw };
       // how long is each buffer? It is based off of the number of rmap buffers
       // and the space allocated to rmap buffers.
-      size_t const len_buffers{ size_t( (sz_total_rmap / num_rmap ) / sizeof(double) ) };
+      size_t const len_buffers{ size_t(( sz_total_rmap / num_rmap ) / sizeof(double)) };
       size_t const sz_raw{ len_buffers * sizeof(Ty) };
       // how many raw buffs can we make of same length.
       size_t num_raw{ sz_total_raw / sz_raw };
 
-      char *mem = allocateEmptyBuffers<Ty>(m_mem, rawEmpty, num_raw, len_buffers);
-      allocateEmptyBuffers<double>(mem, rmapEmpty, num_rmap, len_buffers);
+      char *mem = allocateEmptyBuffers<Ty>(m_mem, m_rawEmpty, num_raw, len_buffers);
+      allocateEmptyBuffers<double>(mem, m_rmapEmpty, num_rmap, len_buffers);
 
       bd::Info() << "Allocated: " << num_raw << " raw buffers of length " << len_buffers
                  << ", and " << num_rmap << " rmap buffers of length "
@@ -244,15 +241,14 @@ RFProc<Ty>::processRawFile(CommandLineOptions const &clo,
 
     }
 
-
     bd::OpacityTransferFunction tr_func{ };
     // If we are doing relevance mapping, then open rmap output file,
     // load the relevance transfer function,
     // reserve space in the relevance map buffer.
     if (!skipRMap) {
 
-      rmapfile.open(clo.rmapFilePath);
-      if (!rmapfile.is_open()) {
+      m_rmapfile.open(clo.rmapFilePath);
+      if (!m_rmapfile.is_open()) {
         bd::Err() << "Could not open rmap output file: " << clo.rmapFilePath;
         return -1;
       }
@@ -267,9 +263,11 @@ RFProc<Ty>::processRawFile(CommandLineOptions const &clo,
         return -1;
       }
 
-      Writer<double>::start(writer, rmapfile);
+      Writer<double>::start(m_writer, m_rmapfile);
     } // if(! skipRMap)
-    Reader<Ty>::start(reader, rawfile);
+
+
+    Reader<Ty>::start(m_reader, m_rawfile);
 
     // set up the VoxelOpacityFunction
     preproc::VoxelOpacityFunction<Ty>
@@ -279,13 +277,16 @@ RFProc<Ty>::processRawFile(CommandLineOptions const &clo,
 
     // push the quit buffer into the writer
     bd::Buffer<double> emptyDouble(nullptr, 0);
-    rmapFull.push(&emptyDouble);
+    m_rmapFull.push(&emptyDouble);
     bd::Dbg() << "pushed empty magic buffer.";
 
-    reader.join();
-    writer.join();
-    rmapfile.close();
-    rawfile.close();
+    m_reader.join();
+    m_rawfile.close();
+
+    if (!skipRMap){
+      m_writer.join();
+      m_rmapfile.close();
+    }
 
   } catch (std::runtime_error &e) {
     bd::Err() << "Exception in " << __func__ << ": " << e.what();
@@ -318,7 +319,7 @@ RFProc<Ty>::loop(bool skipRMap,
   bd::Buffer<Ty> *rawData{ nullptr };
 
   while (true) {
-    rawData = rawFull.pop();
+    rawData = m_rawFull.pop();
 
     if (!rawData->getPtr()) {
       bd::Dbg() << "Got null and empty buffer, breaking work loop.";
@@ -331,7 +332,7 @@ RFProc<Ty>::loop(bool skipRMap,
       genRMapData(rawData, relFunc, false);
     }
 
-    rawEmpty.push(rawData);
+    m_rawEmpty.push(rawData);
 
   } // while
 
@@ -345,7 +346,7 @@ RFProc<Ty>::genRMapData(bd::Buffer<Ty> *rawData,
                         bool no_rmap_buffs)
 {
   bd::Buffer<double> *rmapData{ nullptr };
-  rmapData = rmapEmpty.pop();
+  rmapData = m_rmapEmpty.pop();
   if (!rmapData->getPtr()) {
     bd::Dbg() << "No rmap data to get. Returning...";
     return false;
@@ -364,7 +365,7 @@ RFProc<Ty>::genRMapData(bd::Buffer<Ty> *rawData,
   tbb::blocked_range<size_t> range{ 0, rawData->getNumElements() };
   tbb::parallel_for(range, relevance);
   rmapData->setNumElements(rawData->getNumElements());
-  rmapFull.push(rmapData);
+  m_rmapFull.push(rmapData);
 
   return true;
 }

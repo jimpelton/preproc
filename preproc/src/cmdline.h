@@ -2,6 +2,7 @@
 #define preproc_cmdline_h__
 
 #include <string>
+#include <vector>
 
 namespace preproc
 {
@@ -12,18 +13,12 @@ enum class ActionType
   Generate  ///< Generate a new binary or ascii index file
 };
 
-enum class OutputType
-{
-  Ascii,
-  Binary
-};
-
 struct CommandLineOptions
 {
   // raw file path
   std::string inFile;
   // output file path
-  std::string outFilePath;
+  std::string outFileDirLocation;
   // output file prefix
   std::string outFilePrefix;
   // output file for rmap.
@@ -41,26 +36,14 @@ struct CommandLineOptions
   // true if a simple index file should be created (no relevance mapping)
   bool skipRmapGeneration;
   // number of blocks
-  uint64_t num_blks[3];
+//  uint64_t num_blks[3];
   // volume dimensions
   uint64_t vol_dims[3];
   // buffer size
   uint64_t bufferSize;
   // number of threads
   int numThreads;
-  // threshold max
-//  double blockThreshold_Max;
-//  // threshold minimum
-//  double blockThreshold_Min;
-  // voxel opacity thresh min
-  double voxelOpacityRel_Min;
-  // voxel opacity thresh max
-  double voxelOpacityRel_Max;
-  // volume min value
-//  double volMin;
-  // volume max value
-//  double volMax;
-
+  std::vector<std::string> numBlocks;
 };
 
 

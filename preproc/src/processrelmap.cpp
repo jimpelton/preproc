@@ -20,38 +20,38 @@ namespace
 
 
 /// \brief Use RMap to classify voxels as empty or non-empty within each block.
-void
-parallelCountBlockEmptyVoxels(bd::Buffer<double> const *buf,
-                              CommandLineOptions const &clo,
-                              bd::Volume &volume,
-                              std::vector<bd::FileBlock> &blocks)
-{
-  // if the relevance value from the rmap is in
-  // [voxelOpacityRel_Min .. voxelOpacityRel_Max] then it is relevant.
-  auto relevanceFunction =
-      [&](double x) -> bool
-      {
-        return x >= clo.voxelOpacityRel_Min && x <= clo.voxelOpacityRel_Max;
-      };
-
-  using Classifier = bd::ParallelReduceBlockEmpties<double, decltype(relevanceFunction)>;
-
-  Classifier empties{ buf, &volume, relevanceFunction };
-
-
-  // count the voxels in parallel
-  tbb::blocked_range<size_t> range{ 0, buf->getNumElements() };
-  tbb::parallel_reduce(range, empties);
-
-
-  // Total the empty voxels for each block.
-  uint64_t const *emptyCounts{ empties.empties() };
-  for (size_t i{ 0 }; i < blocks.size(); ++i) {
-    bd::FileBlock *b{ &blocks[i] };
-    b->empty_voxels += emptyCounts[i];
-  }
-
-} // parallelCountBlockEmptyVoxels()
+//void
+//parallelCountBlockEmptyVoxels(bd::Buffer<double> const *buf,
+//                              CommandLineOptions const &clo,
+//                              bd::Volume &volume,
+//                              std::vector<bd::FileBlock> &blocks)
+//{
+//  // if the relevance value from the rmap is in
+//  // [voxelOpacityRel_Min .. voxelOpacityRel_Max] then it is relevant.
+//  auto relevanceFunction =
+//      [&](double x) -> bool
+//      {
+//        return x >= clo.voxelOpacityRel_Min && x <= clo.voxelOpacityRel_Max;
+//      };
+//
+//  using Classifier = bd::ParallelReduceBlockEmpties<double, decltype(relevanceFunction)>;
+//
+//  Classifier empties{ buf, &volume, relevanceFunction };
+//
+//
+//  // count the voxels in parallel
+//  tbb::blocked_range<size_t> range{ 0, buf->getNumElements() };
+//  tbb::parallel_reduce(range, empties);
+//
+//
+//  // Total the empty voxels for each block.
+//  uint64_t const *emptyCounts{ empties.empties() };
+//  for (size_t i{ 0 }; i < blocks.size(); ++i) {
+//    bd::FileBlock *b{ &blocks[i] };
+//    b->empty_voxels += emptyCounts[i];
+//  }
+//
+//} // parallelCountBlockEmptyVoxels()
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -104,7 +104,7 @@ processRelMap(CommandLineOptions const &clo,
 
   while ((buf = r.waitNextFullUntilNone()) != nullptr) {
 
-    parallelCountBlockEmptyVoxels(buf, clo, volume, blocks);
+//    parallelCountBlockEmptyVoxels(buf, clo, volume, blocks);
 
     parallelSumBlockRelevances(buf, clo, volume, blocks);
 

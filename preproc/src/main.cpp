@@ -16,6 +16,9 @@
 
 #include <tbb/tbb.h>
 
+#include <boost/algorithm/string.hpp>
+#include <boost/filesystem.hpp>
+
 #include <sstream>
 #include <string>
 #include <iostream>
@@ -25,20 +28,20 @@
 
 using bd::Err;
 using bd::Info;
+namespace fs = boost::filesystem;
 
 namespace preproc
 {
 
 ////////////////////////////////////////////////////////////////////////////////
 std::string
-makeFileNameString(const CommandLineOptions &clo, const char *extension)
+makeFileNameString(const CommandLineOptions &clo, std::tuple<int,int,int> nb)
 {
   std::stringstream outFileName;
-  outFileName << clo.outFilePath << '/' << clo.outFilePrefix
-              << '_' << clo.num_blks[0] << '-' << clo.num_blks[1] << '-'
-              << clo.num_blks[2]
-              /*<< '_' << clo.blockThreshold_Min << '-' << clo.blockThreshold_Max*/
-              << extension;
+  outFileName << clo.outFileDirLocation << '/' << clo.outFilePrefix
+              << '_' << std::get<0>(nb) << '-'
+              << std::get<1>(nb) << '-'
+              << std::get<2>(nb);
 
   return outFileName.str();
 }
@@ -58,16 +61,18 @@ printBlocksToStdOut(bd::IndexFile const &indexFile)
 
 ////////////////////////////////////////////////////////////////////////////////
 void
-writeIndexFileToDisk(bd::IndexFile const &indexFile, CommandLineOptions const &clo)
+writeIndexFileToDisk(bd::IndexFile const &indexFile,
+                     std::string const &nameWithoutExtension,
+                     CommandLineOptions const &clo)
 {
 
   {
-    std::string outFileName{ makeFileNameString(clo, ".json") };
+    std::string outFileName{ nameWithoutExtension + ".json"};
     indexFile.writeAsciiIndexFile(outFileName);
   }
 
   {
-    std::string outFileName{ makeFileNameString(clo, ".bin") };
+    std::string outFileName{ nameWithoutExtension + ".bin" };
     indexFile.writeBinaryIndexFile(outFileName);
   }
 
@@ -78,39 +83,83 @@ writeIndexFileToDisk(bd::IndexFile const &indexFile, CommandLineOptions const &c
 /// \throws std::runtime_error if rawfile can't be opened.
 template<class Ty>
 void
-generateIndexFile(const CommandLineOptions &clo, bd::DataType type)
+generateIndexFile(const CommandLineOptions &clo,
+                  std::vector<std::tuple<int,int,int>> tuples,
+                  bd::DataType type)
 {
   bd::Info() << "Processing raw file.";
 
-  std::unique_ptr<bd::IndexFile> indexFile{ new bd::IndexFile() };
-  indexFile->getVolume().voxelDims({ clo.vol_dims[0], clo.vol_dims[1], clo.vol_dims[2] });
-  indexFile->getVolume().block_count({ clo.num_blks[0], clo.num_blks[1], clo.num_blks[2] });
+  fs::path rawPath(clo.inFile);
+  fs::path tfPath(clo.tfuncPath);
 
+
+  int numThreads = clo.numThreads;
+  if (numThreads == 0) {
+    numThreads = tbb::task_scheduler_init::default_num_threads();
+  }
   tbb::task_scheduler_init init(clo.numThreads);
+
   bd::Info() << "Computing volume min/max.";
-  volumeMinMax<Ty>(clo.inFile, clo.bufferSize, clo.numThreads, indexFile->getVolume());
+  bd::Volume minmax{ {clo.vol_dims[0], clo.vol_dims[1], clo.vol_dims[2]}, {1, 1, 1} };
+  volumeMinMax<Ty>(clo.inFile, clo.bufferSize, minmax);
 
-  indexFile->init(type);
+  bool skipRmap{ clo.skipRmapGeneration };
+  for (auto &t : tuples) {
+    std::unique_ptr<bd::IndexFile> indexFile{ new bd::IndexFile() };
+    indexFile->getVolume().voxelDims(minmax.voxelDims());
+    indexFile->getVolume().block_count({ std::get<0>(t), std::get<1>(t), std::get<2>(t) });
+    indexFile->getVolume().min(minmax.min());
+    indexFile->getVolume().max(minmax.max());
+    indexFile->getVolume().avg(minmax.avg());
+    indexFile->getVolume().total(minmax.total());
+    indexFile->setRawFileName(rawPath.filename().string());
+    indexFile->setTFFileName(tfPath.filename().string());
+    indexFile->init(type);
 
-  RFProc<Ty> proc;
-  int result = proc.processRawFile(clo,
-                     indexFile->getVolume(),
-                     indexFile->getFileBlocks(),
-                     clo.skipRmapGeneration);
-  if (result != 0) {
-    throw std::runtime_error("Problem processing raw file.");
-  }
+    RFProc<Ty> proc;
+    int result = proc.processRawFile(clo,
+                                     indexFile->getVolume(),
+                                     indexFile->getFileBlocks(),
+                                     skipRmap);
+    if (result != 0) {
+      throw std::runtime_error("Problem processing raw file.");
+    }
 
-  if (!clo.skipRmapGeneration) {
+
     bd::Info() << "Processing relevance map.";
-    processRelMap(clo,
-                  indexFile->getVolume(),
-                  indexFile->getFileBlocks());
+    processRelMap(clo, indexFile->getVolume(), indexFile->getFileBlocks());
+
+    writeIndexFileToDisk(*( indexFile.get()), makeFileNameString(clo, t), clo);
+
+    // we only need to write the Rmap one time, but we will keep processing it
+    // for each iteration where we have a different block count.
+    skipRmap = true;
+
+  } // for(auto &t...
+}
+
+bool
+makeNumBlocksTuples(std::vector<std::tuple<int,int,int>> &tups,
+                    std::vector<std::string> const &strs)
+{
+  if (strs.size() == 0) {
+    tups.push_back(std::make_tuple(1, 1, 1));
+    return true;
   }
 
-
-  writeIndexFileToDisk(*(indexFile.get()), clo);
-
+  for (auto &s : strs) {
+    std::vector<std::string> split;
+    boost::split(split, s, boost::is_any_of("x,"), boost::token_compress_on);
+    if (split.size() < 3) {
+      bd::Err() << "Block dimensions tuple has less than three!";
+      return false;
+    }
+    int x{ std::stoi(split[0]) };
+    int y{ std::stoi(split[1]) };
+    int z{ std::stoi(split[2]) };
+    tups.push_back(std::make_tuple(x, y, z));
+  }
+  return true;
 }
 
 
@@ -132,9 +181,11 @@ generate(CommandLineOptions &clo)
     clo.dataType = bd::to_string(datfile.dataType);
 
     bd::Info() << clo << std::endl; // print cmd line options
-    //std::cout << "\n---Begin Dat File---\n" << datfile << "\n---End Dat File---\n";
 
   }
+
+  std::vector<std::tuple<int,int,int>> tuples;
+  makeNumBlocksTuples(tuples, clo.numBlocks);
 
   // Decide what data type we have and call generateIndexFile() to kick off the processing.
   bd::DataType type{ bd::to_dataType(clo.dataType) };
@@ -142,15 +193,15 @@ generate(CommandLineOptions &clo)
   switch (type) {
 
     case bd::DataType::UnsignedCharacter:
-      preproc::generateIndexFile<unsigned char>(clo, type);
+      preproc::generateIndexFile<unsigned char>(clo, tuples, type);
       break;
 
     case bd::DataType::UnsignedShort:
-      preproc::generateIndexFile<unsigned short>(clo, type);
+      preproc::generateIndexFile<unsigned short>(clo, tuples, type);
       break;
 
     case bd::DataType::Float:
-      preproc::generateIndexFile<float>(clo, type);
+      preproc::generateIndexFile<float>(clo, tuples, type);
       break;
 
     default:
@@ -186,7 +237,7 @@ convert(CommandLineOptions &clo)
     std::string name(clo.inFile, startName, endName);
     name += ".json";
 
-    index->writeAsciiIndexFile(clo.outFilePath + '/' + name);
+    index->writeAsciiIndexFile(clo.outFileDirLocation + '/' + name);
 
   }
 }
@@ -208,10 +259,6 @@ try
     Err() << "Command line parse error, exiting.";
     bd::logger::shutdown();
     return 1;
-  }
-
-  if (clo.numThreads == 0) {
-    clo.numThreads = tbb::task_scheduler_init::default_num_threads();
   }
 
   switch (clo.actionType) {

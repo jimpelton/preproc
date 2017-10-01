@@ -21,13 +21,11 @@
 /// \tparam Ty The data type of the voxel elements in the volume.
 /// \param path The path to the file.
 /// \param szbuf Size of buffer (in bytes) to allocate.
-/// \param numThreads Number of tbb threads to use for processing.
 /// \param volume The volume to use for storing the results in.
 template<typename Ty>
 void
 volumeMinMax(std::string const & path,
              size_t szbuf,
-             int numThreads,
              bd::Volume &volume)
 {
 

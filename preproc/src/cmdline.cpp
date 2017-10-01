@@ -61,14 +61,6 @@ try
                        "string");
   cmd.add(outFilePrefixArg);
 
-  // ouput file type
-//  std::vector< std::string > outputTypes{ "ascii", "binary" };
-//  TCLAP::ValuesConstraint< std::string > outputTypesAllowValues(outputTypes);
-//  TCLAP::ValueArg< std::string > outputTypeArg
-//      ("", "output-format", "Output file type (ascii, binary)", false, "",
-//          &outputTypesAllowValues);
-//  cmd.add(outputTypeArg);
-
 
   // transfer function file
   TCLAP::ValueArg<std::string> tfuncArg("u",
@@ -89,17 +81,14 @@ try
                                           "string");
   cmd.add(datFileArg);
 
-  // volume data type
-  std::vector<std::string> dataTypes{ "float", "ushort", "uchar" };
-  TCLAP::ValuesConstraint<std::string> dataTypeAllowValues(dataTypes);
-  TCLAP::ValueArg<std::string> dataTypeArg("t",
-                                           "type",
-                                           "Data type of raw volume data set.\n"
-                                               "Default: uchar",
-                                           false,
-                                           "uchar",
-                                           &dataTypeAllowValues);
-  cmd.add(dataTypeArg);
+
+  TCLAP::MultiArg<std::string> numBlocksMultiArg("D",
+                                                 "bdim",
+                                                 "Number of blocks along each dim.",
+                                                 false,
+                                                 "string");
+  cmd.add(numBlocksMultiArg);
+
 
   // convert bin to ascii flag
   TCLAP::SwitchArg readArg("c",
@@ -119,33 +108,33 @@ try
   cmd.add(zdimArg);
 
 
-  // num blocks
-  TCLAP::ValueArg<size_t> xBlocksArg("",
-                                     "nbx",
-                                     "Num blocks x dim\n"
-                                         "Default: 1",
-                                     false,
-                                     1,
-                                     "uint");
-  cmd.add(xBlocksArg);
-
-  TCLAP::ValueArg<size_t> yBlocksArg("",
-                                     "nby",
-                                     "Num blocks y dim\n"
-                                         "Default: 1",
-                                     false,
-                                     1,
-                                     "uint");
-  cmd.add(yBlocksArg);
-
-  TCLAP::ValueArg<size_t> zBlocksArg("",
-                                     "nbz",
-                                     "Num blocks z dim\n"
-                                         "Default: 1",
-                                     false,
-                                     1,
-                                     "uint");
-  cmd.add(zBlocksArg);
+//  // num blocks
+//  TCLAP::ValueArg<size_t> xBlocksArg("",
+//                                     "nbx",
+//                                     "Num blocks x dim\n"
+//                                         "Default: 1",
+//                                     false,
+//                                     1,
+//                                     "uint");
+//  cmd.add(xBlocksArg);
+//
+//  TCLAP::ValueArg<size_t> yBlocksArg("",
+//                                     "nby",
+//                                     "Num blocks y dim\n"
+//                                         "Default: 1",
+//                                     false,
+//                                     1,
+//                                     "uint");
+//  cmd.add(yBlocksArg);
+//
+//  TCLAP::ValueArg<size_t> zBlocksArg("",
+//                                     "nbz",
+//                                     "Num blocks z dim\n"
+//                                         "Default: 1",
+//                                     false,
+//                                     1,
+//                                     "uint");
+//  cmd.add(zBlocksArg);
 
 
   // buffer size
@@ -160,52 +149,6 @@ try
                     sixty_four_megs, "uint");
   cmd.add(bufferSizeArg);
 
-//
-//  // block ratio of visibility threshold min
-//  TCLAP::ValueArg<float>
-//      blockROV_Min_Arg("", "block-rov-min",
-//                       "Block ratio-of-visibility min.\n"
-//                           "Values: [MIN_FLOAT - MAX_FLOAT] < block-rov-max.\n"
-//                           "Default: MIN_FLOAT",
-//                       false,
-//                       std::numeric_limits<float>::lowest(), "float");
-//  cmd.add(blockROV_Min_Arg);
-//
-//
-//  // block ratio of visibility threshold max
-//  TCLAP::ValueArg<float>
-//      blockROV_Max_Arg("",
-//                       "block-rov-max",
-//                       "Block ratio-of-visibility max.\n"
-//                           "Values: [MIN_FLOAT - MAX_FLOAT] > block-rov-min.\n"
-//                           "Default: MAX_FLOAT",
-//                       false,
-//                       std::numeric_limits<float>::max(), "float");
-//  cmd.add(blockROV_Max_Arg);
-
-
-  // voxel opacity relevance threshold
-  TCLAP::ValueArg<float>
-    voxelOpacityRelevance_Min_Arg("",
-                                  "voxel-opacity-min",
-                                  "Voxel opacity relevance minimum threshold.\n"
-                                      "Valid value: [0.0-1.0] < voxel-opacity-max.\n"
-                                      "Default: 0.0",
-                                  false,
-                                  0.0, "float");
-  cmd.add(voxelOpacityRelevance_Min_Arg);
-
-
-  // voxel opacity relevance threshold
-  TCLAP::ValueArg<float>
-      voxelOpacityRelevance_Max_Arg("",
-                                    "voxel-opacity-max",
-                                    "Voxel opacity relevance maximum threshold.\n"
-                                        "Valid value: [0.0-1.0] > voxel-opacity-min.\n"
-                                        "Default: 0.0",
-                                    false,
-                                    1.0, "float");
-  cmd.add(voxelOpacityRelevance_Max_Arg);
 
   TCLAP::ValueArg<int>
     numThreadsArg("n",
@@ -215,28 +158,6 @@ try
                   false,
                   0, "int");
   cmd.add(numThreadsArg);
-
-  // volume minimum value
-//  TCLAP::ValueArg<double>
-//      volMinArg("", "vol-min",
-//                "Volume min value.\n"
-//                    "Valid value: [MIN_DOUBLE - MAX_DOUBLE]\n"
-//                    "Required",
-//                true,
-//                std::numeric_limits<double>::lowest(), "double");
-//  cmd.add(volMinArg);
-
-
-  // volume maximum value
-//  TCLAP::ValueArg<double>
-//      volMaxArg("", "vol-max",
-//                "Volume max value.\n"
-//                    "Valid value: [MIN_DOUBLE - MAX_DOUBLE]\n"
-//                    "Required",
-//                true,
-//                std::numeric_limits<double>::max(), "double");
-//  cmd.add(volMaxArg);
-
 
   // print blocks
   TCLAP::SwitchArg
@@ -250,28 +171,19 @@ try
 
   opts.actionType = readArg.getValue() ? ActionType::Convert : ActionType::Generate;
   opts.inFile = fileArg.getValue();
-  opts.outFilePath = outFileDirArg.getValue();
+  opts.outFileDirLocation = outFileDirArg.getValue();
   opts.outFilePrefix = outFilePrefixArg.getValue();
   opts.rmapFilePath = rmapFilePathArg.getValue();
   opts.tfuncPath = tfuncArg.getValue();
   opts.datFilePath = datFileArg.getValue();
-  opts.dataType = dataTypeArg.getValue();
   opts.printBlocks = printBlocksArg.getValue();
   opts.skipRmapGeneration = skipRmapArg.getValue();
   opts.vol_dims[0] = xdimArg.getValue();
   opts.vol_dims[1] = ydimArg.getValue();
   opts.vol_dims[2] = zdimArg.getValue();
-  opts.num_blks[0] = xBlocksArg.getValue();
-  opts.num_blks[1] = yBlocksArg.getValue();
-  opts.num_blks[2] = zBlocksArg.getValue();
+  opts.numBlocks = numBlocksMultiArg.getValue();
   opts.bufferSize = convertToBytes(bufferSizeArg.getValue());
   opts.numThreads = numThreadsArg.getValue();
-//  opts.blockThreshold_Min = blockROV_Min_Arg.getValue();
-//  opts.blockThreshold_Max = blockROV_Max_Arg.getValue();
-  opts.voxelOpacityRel_Max = voxelOpacityRelevance_Max_Arg.getValue();
-  opts.voxelOpacityRel_Min = voxelOpacityRelevance_Min_Arg.getValue();
-//  opts.volMin = volMinArg.getValue();
-//  opts.volMax = volMaxArg.getValue();
 
   return static_cast<int>(cmd.getArgList().size());
 
@@ -318,7 +230,7 @@ operator<<(std::ostream &os, const CommandLineOptions &opts)
      << "\n" "Input file path: "
      << opts.inFile
      << "\n" "Output file path: "
-     << opts.outFilePath
+     << opts.outFileDirLocation
      << "\n" "Output file prefix: "
      << opts.outFilePrefix
      << "\n" "RMap output file path: "
@@ -334,17 +246,17 @@ operator<<(std::ostream &os, const CommandLineOptions &opts)
      << opts.vol_dims[1] << " X "
      << opts.vol_dims[2]
      << "\n" "Num blocks (x X y X z): "
-     << opts.num_blks[0] << " X "
-     << opts.num_blks[1] << " X "
-     << opts.num_blks[2]
+//     << opts.num_blks[0] << " X "
+//     << opts.num_blks[1] << " X "
+//     << opts.num_blks[2]
      << "\n" "Buffer Size: "
      << opts.bufferSize << " bytes."
 //     << "\n" "Block ratio of vis. min/max: "
 //     << opts.blockThreshold_Min << " - "
 //     << opts.blockThreshold_Max
-     << "\n" "Voxel opacity rel. min/max: "
-     << opts.voxelOpacityRel_Min << " - "
-     << opts.voxelOpacityRel_Max
+//     << "\n" "Voxel opacity rel. min/max: "
+//     << opts.voxelOpacityRel_Min << " - "
+//     << opts.voxelOpacityRel_Max
 //     << "\n" "Volume min/max : "
 //     << opts.volMin << " - "
 //     << opts.volMax
