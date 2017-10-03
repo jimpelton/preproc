@@ -71,6 +71,6 @@ include_directories(
 
 add_subdirectory(preproc)
 add_subdirectory(rawhist)
-add_subdirectory(resample)
+#add_subdirectory(resample)
 add_subdirectory(gmag)
 add_subdirectory(concat)
