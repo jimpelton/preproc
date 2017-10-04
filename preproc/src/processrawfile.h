@@ -7,6 +7,7 @@
 #include "voxelopacityfunction.h"
 #include "reader.h"
 #include "writer.h"
+#include "outputer.h"
 
 #include <bd/io/indexfile.h>
 #include <bd/log/logger.h>
@@ -194,6 +195,9 @@ RFProc<Ty>::processRawFile(CommandLineOptions const &clo,
                            std::vector<bd::FileBlock> &blocks,
                            bool skipRMap)
 {
+  preproc::Outputer outputer;
+  outputer.start();
+
   try {
     // The relevance map is stored in pre-allocated vector.
     // It is only as large as a single buffer from the reader

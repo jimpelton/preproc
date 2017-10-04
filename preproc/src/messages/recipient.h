@@ -2,13 +2,15 @@
 #define RECIPIENT_H
 
 #include "message.h"
-#include <iostream>
 
+#include <cstddef>
 
 namespace preproc
 {
 
-class DataReadMesage;
+class DataReadMessage;
+class DataWrittenMessage;
+class EmptyMessage;
 
 class Recipient {
 public:
@@ -28,8 +30,13 @@ public:
   }
 
   virtual void
-  handle_DataReadMessage(DataReadMessage &) { }
-  
+  handle_EmptyMessage(EmptyMessage const &) { }
+
+  virtual void
+  handle_DataReadMessage(DataReadMessage const &) { }
+
+  virtual void
+  handle_DataWrittenMessage(DataWrittenMessage const &) { }
 
 };
 
@@ -39,7 +46,7 @@ public:
   public:
     DataReadMessage ()
       : Message( MessageType::DATA_READ_MESSAGE )
-      , IsChanging{ false }
+      , Amount{ 0 }
     {
     }
 
@@ -54,6 +61,45 @@ public:
     size_t Amount;
   };
 
+///////////////////////////////////////////////////////////////////////////////
+class DataWrittenMessage : public Message
+{
+public:
+  DataWrittenMessage ()
+      : Message( MessageType::DATA_WRITTEN_MESSAGE )
+      , Amount{ 0 }
+  {
+  }
+
+  virtual ~DataWrittenMessage() { }
+
+  void
+  operator()(Recipient &r) override
+  {
+    r.handle_DataWrittenMessage(*this);
+  }
+
+  size_t Amount;
+};
+
+///////////////////////////////////////////////////////////
+class EmptyMessage : public Message
+{
+public:
+  EmptyMessage ()
+      : Message( MessageType::EMPTY_MESSAGE)
+  {
+  }
+
+  virtual ~EmptyMessage() { }
+
+  void
+  operator()(Recipient &r) override
+  {
+    r.handle_EmptyMessage(*this);
+  }
+
+};
 
 } // namespace preproc
 #endif // RECIPIENT_H

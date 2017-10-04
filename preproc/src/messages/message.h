@@ -1,12 +1,11 @@
 #ifndef subvol_globalstatscollector_h__
 #define subvol_globalstatscollector_h__
 
-#include <iostream>
-
 namespace preproc{
   enum class MessageType : int {
     EMPTY_MESSAGE,
     DATA_READ_MESSAGE,
+    DATA_WRITTEN_MESSAGE,
   };
   
   class Recipient;
@@ -28,7 +27,7 @@ namespace preproc{
 
 
 
-} // namespace subvol
+} // namespace preproc
 
 
 

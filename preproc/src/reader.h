@@ -6,9 +6,14 @@
 #ifndef PREPROCESSOR_READER_H
 #define PREPROCESSOR_READER_H
 
+#include "messages/recipient.h"
+#include "messages/messagebroker.h"
+
 #include <bd/io/buffer.h>
 #include <bd/datastructure/blockingqueue.h>
 
+namespace preproc
+{
 
 template<class Ty>
 class Reader
@@ -70,10 +75,13 @@ public:
               buf->getMaxNumElements() * sizeof(Ty));
 
       std::streamsize amount{ is.gcount() };
-      bytes_read += amount;
+
+      DataReadMessage *m{ new DataReadMessage };
+      m->Amount = amount;
+      Broker::send(m);
+
       buf->setNumElements(amount / sizeof(Ty));
       buf->setIndexOffset(bytes_read / sizeof(Ty));
-      bd::Dbg() << "Reader read " << bytes_read << " bytes";
       m_full->push(buf);
 
       // entire file has been read.
@@ -116,10 +124,10 @@ private:
 
   std::future<uint64_t> reader_future;
 
-};
+}; // class Reader
 
 
-
+} // namespace preproc
 
 
 #endif //PREPROCESSOR_READER_H

@@ -4,7 +4,7 @@
 
 cmake_minimum_required(VERSION 2.8)
 #### P r o j e c t   D e f i n i t i o n  ##################################
-project(preprocessor CXX)
+project(preprocessor LANGUAGES CXX)
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake
     ${CMAKE_MODULE_PATH}

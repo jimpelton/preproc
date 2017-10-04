@@ -1,8 +1,0 @@
-#ifndef ROVCHANGINGMESSAGE_H
-#define ROVCHANGINGMESSAGE_H
-
-namespace subvol
-{
-
-}
-#endif // ROVCHANGINGMESSAGE_H

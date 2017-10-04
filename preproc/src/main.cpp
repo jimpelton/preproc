@@ -8,6 +8,7 @@
 #include "volumeminmax.h"
 #include "processrawfile.h"
 #include "processrelmap.h"
+#include "outputer.h"
 
 #include <bd/util/util.h>
 #include <bd/io/indexfile.h>
@@ -250,7 +251,7 @@ int
 main(int argc, const char *argv[])
 try
 {
-
+  preproc::Broker::start();
   using preproc::CommandLineOptions;
   CommandLineOptions clo;
 

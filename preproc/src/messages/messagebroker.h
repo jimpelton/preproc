@@ -10,7 +10,7 @@
 #include <condition_variable>
 #include <queue>
 #include <future>
-#include <iostream>
+#include <algorithm>
 
 
 namespace preproc {
@@ -32,6 +32,16 @@ namespace preproc {
     subscribeRecipient(Recipient *r)
     {
       m_myself->m_recipients.push_back(r);
+    }
+
+    static void
+    removeRecipient(Recipient *r)
+    {
+      auto found = std::find(m_myself->m_recipients.begin(),
+                             m_myself->m_recipients.end(), r);
+      if (found != m_myself->m_recipients.end()) {
+        m_myself->m_recipients.erase(found);
+      }
     }
 
     static void

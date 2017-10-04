@@ -10,6 +10,8 @@ set(preproc_HEADERS
         "${CMAKE_CURRENT_SOURCE_DIR}/volumeminmax.h"
         "${CMAKE_CURRENT_SOURCE_DIR}/writer.h"
         "${CMAKE_CURRENT_SOURCE_DIR}/voxelopacityfunction.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/outputer.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/semathing.h"
         "${CMAKE_CURRENT_SOURCE_DIR}/messages/messagebroker.h"
         "${CMAKE_CURRENT_SOURCE_DIR}/messages/message.h"
         "${CMAKE_CURRENT_SOURCE_DIR}/messages/recipient.h"

@@ -5,12 +5,17 @@
 #ifndef PREPROCESSOR_WRITER_H
 #define PREPROCESSOR_WRITER_H
 
+#include "messages/messagebroker.h"
+
 #include <bd/log/logger.h>
 #include <bd/io/buffer.h>
 #include <bd/datastructure/blockingqueue.h>
 
 #include <fstream>
 #include <future>
+
+namespace preproc
+{
 
 template<class Ty>
 class Writer
@@ -61,7 +66,6 @@ public:
   operator()(std::ofstream &os)
   {
     bd::Info() << "Starting writer loop.";
-    size_t bytes_written{ 0 };
     while (true) {
 
       buffer_type *buf{ m_full->pop() };
@@ -72,11 +76,11 @@ public:
         break;
       }
 
-      os.write(reinterpret_cast<char *>(buf->getPtr()),
-               buf->getNumElements() * sizeof(Ty));
-      bytes_written += buf->getNumElements() * sizeof(Ty);
+      os.write(reinterpret_cast<char *>(buf->getPtr()), buf->getNumElements() * sizeof(Ty));
 
-      bd::Dbg() << "Writer written " << bytes_written << " bytes";
+      DataWrittenMessage *m = new DataWrittenMessage;
+      m->Amount = buf->getNumElements() * sizeof(Ty);
+      Broker::send(m);
 
       buf->setNumElements(0);
 
@@ -116,4 +120,5 @@ private:
 
 };
 
+} // namespace preproc
 #endif //PREPROCESSOR_WRITER_H
