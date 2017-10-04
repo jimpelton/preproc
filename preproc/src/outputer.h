@@ -17,15 +17,18 @@ public:
 
   Outputer()
       : Recipient()
-    , totalWritten{0}
-  , totalRead{ 0 }
-  , m_semathing{ 1 }
+      , totalWritten{0}
+      , totalRead{ 0 }
+      , m_semathing{ 1 }
   {
     Broker::subscribeRecipient(this);
   }
 
 virtual ~Outputer()
 {
+  shouldExit=true;
+  m_semathing.signal();
+  m_future.wait();
   Broker::removeRecipient(this);
 }
 
@@ -60,11 +63,10 @@ handle_EmptyMessage(EmptyMessage const &m) override
 {
   shouldExit = true;
   m_semathing.signal();
-  m_future.wait();
 }
 
 private:
-  int
+  void
   print()
   {
     shouldExit=false;
@@ -82,14 +84,14 @@ private:
       }
       std::cout << std::flush;
     }
-    return 0;
+    bd::Info() << "Exiting print loop in Outputer.";
   }
 
   size_t totalWritten;
   size_t totalRead;
   bool shouldExit;
   Semathing m_semathing;
-  std::future<int> m_future;
+  std::future<void> m_future;
 };
 
 
