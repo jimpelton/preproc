@@ -92,6 +92,7 @@ processRelMap(CommandLineOptions const &clo,
 {
   bd::BufferedReader<double> r{ clo.bufferSize };
 
+  bd::Info() << "Opening rmap file for processing: " << clo.rmapFilePath;
   if (!r.open(clo.rmapFilePath)) {
     throw std::runtime_error("Could not open file: " + clo.rmapFilePath);
   }
@@ -113,11 +114,11 @@ processRelMap(CommandLineOptions const &clo,
 
 
   // compute the block relevance as a ratio of
-  //  for (auto &b : blocks) {
-  //    uint64_t totalvox{ b.voxel_dims[0] * b.voxel_dims[1] * b.voxel_dims[2] };
-  //    assert(totalvox > 0);
-  //    b.rov /= double(totalvox); //double(b.empty_voxels);
-  //  }
+  for (auto &b : blocks) {
+    uint64_t const totalvox{ b.voxel_dims[0] * b.voxel_dims[1] * b.voxel_dims[2] };
+    assert(totalvox > 0);
+    b.rov /= double(totalvox); //double(b.empty_voxels);
+  }
 
 //  std::for_each(blocks.begin(),
 //                blocks.end(),

@@ -17,25 +17,25 @@ if(NOT DEFINED CRUFT_INCLUDE_DIR)
 endif()
 set(CRUFT_INCLUDE_DIR ${${CRUFT_INCLUDE_DIR}} CACHE PATH "Cruft includes directory path")
 
-if(NOT DEFINED CRUFT_LIBRARIES)
-    set(CRUFT_LIBRARIES)
+if(NOT DEFINED CRUFT_LIBRARY_DIR)
+    set(CRUFT_LIBRARY_DIR)
 endif()
-set(CRUFT_LIBRARIES ${${CRUFT_LIBRARIES}} CACHE FILEPATH "Cruft library file (.a,.dylib,.lib).")
+set(CRUFT_LIBRARY_DIR ${${CRUFT_LIBRARY_DIR}} CACHE PATH "Cruft library file (.a,.dylib,.lib).")
 
 
 #### Intel TBB Library ##################################################
 if(NOT DEFINED TBB_INCLUDE_DIR)
     set(TBB_INCLUDE_DIR)
 endif()
-set(TBB_INCLUDE_DIR ${${TBB_INCLUDE_DIR}} CACHE PATH "TBB includes directory path")
+set(TBB_INCLUDE_DIR ${${TBB_INCLUDE_DIR}} CACHE PATH "Cruft includes directory path")
 
-if(NOT DEFINED TBB_LIBRARIES)
-    set(TBB_LIBRARIES)
+if(NOT DEFINED TBB_LIBRARY_DIR)
+    set(TBB_LIBRARY_DIR)
 endif()
-set(TBB_LIBRARIES ${${TBB_LIBRARIES}} CACHE FILEPATH "TBB library file (.a,.dylib,.lib).")
+set(TBB_LIBRARY_DIR ${${TBB_LIBRARY_DIR}} CACHE PATH "Directory with intel tbb libs.")
 
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug") 
-    add_definitions(-DTBB_USE_DEBUG=1)
+    add_definitmdions(-DTBB_USE_DEBUG=1)
 endif()
 
 #### Definitions ##########################################################
@@ -54,11 +54,16 @@ endif (UNIX)
 
 #### T h i r d   P a r t y  ################################################
 
-#set(Boost_USE_STATIC_LIBS ON)
-#set(Boost_USE_MULTITHREADED ON)
+set(Boost_USE_STATIC_LIBS ON)
+set(Boost_USE_MULTITHREADED ON)
 
 find_package(GLM REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system filesystem)
+
+find_library(CRUFT_DEBUG_LIB cruftd HINTS "${CRUFT_LIBRARY_DIR}")
+find_library(CRUFT_RELEASE_LIB cruft HINTS "${CRUFT_LIBRARY_DIR}")
+find_library(TBB_DEBUG_LIB tbb_debug HINTS "${TBB_LIBRARY_DIR}")
+find_library(TBB_RELEASE_LIB tbb HINTS "${TBB_LIBRARY_DIR}")
 
 include_directories(
         "${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/tclap/include"
@@ -70,7 +75,8 @@ include_directories(
 
 
 add_subdirectory(preproc)
-add_subdirectory(rawhist)
+add_subdirectory(gradvol)
+#add_subdirectory(rawhist)
 #add_subdirectory(resample)
-add_subdirectory(gmag)
+#add_subdirectory(gmag)
 add_subdirectory(concat)

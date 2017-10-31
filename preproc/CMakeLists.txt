@@ -14,8 +14,10 @@ add_executable(
         "${preproc_SOURCES}" )
 #link_directories("/usr/lib64/")
 target_link_libraries(preproc
-        ${CRUFT_LIBRARIES}
-        ${TBB_LIBRARIES}
+        debug ${CRUFT_DEBUG_LIB}
+        optimized ${CRUFT_RELEASE_LIB}
+        debug ${TBB_DEBUG_LIB}
+        optimized ${TBB_RELEASE_LIB}
         ${Boost_LIBRARIES}
         )
 

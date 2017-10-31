@@ -28,8 +28,10 @@ add_executable(concat "${concat_HEADERS}" "${concat_SOURCES}")
 # Linker
 
 target_link_libraries(concat
-        ${CRUFT_LIBRARIES}
-        ${TBB_LIBRARIES}
+       debug ${CRUFT_DEBUG_LIB}
+       optimized ${CRUFT_RELEASE_LIB}
+       debug ${TBB_DEBUG_LIB}
+       optimized ${TBB_RELEASE_LIB}
         )
 
 ################################################################################

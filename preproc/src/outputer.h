@@ -27,8 +27,8 @@ public:
 virtual ~Outputer()
 {
   shouldExit=true;
-  m_semathing.signal();
-  m_future.wait();
+//  m_semathing.signal();
+//  m_future.wait();
   Broker::removeRecipient(this);
 }
 

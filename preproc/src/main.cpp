@@ -36,13 +36,13 @@ namespace preproc
 
 ////////////////////////////////////////////////////////////////////////////////
 std::string
-makeFileNameString(const CommandLineOptions &clo, std::tuple<int,int,int> nb)
+makeFileNameString(const CommandLineOptions &clo, std::tuple<int, int, int> nb)
 {
   std::stringstream outFileName;
   outFileName << clo.outFileDirLocation << '/' << clo.outFilePrefix
-              << '_' << std::get<0>(nb) << '-'
-              << std::get<1>(nb) << '-'
-              << std::get<2>(nb);
+    << '_' << std::get<0>(nb) << '-'
+    << std::get<1>(nb) << '-'
+    << std::get<2>(nb);
 
   return outFileName.str();
 }
@@ -68,7 +68,7 @@ writeIndexFileToDisk(bd::IndexFile const &indexFile,
 {
 
   {
-    std::string outFileName{ nameWithoutExtension + ".json"};
+    std::string outFileName{ nameWithoutExtension + ".json" };
     indexFile.writeAsciiIndexFile(outFileName);
   }
 
@@ -85,20 +85,19 @@ writeIndexFileToDisk(bd::IndexFile const &indexFile,
 template<class Ty>
 void
 generateIndexFile(const CommandLineOptions &clo,
-                  std::vector<std::tuple<int,int,int>> tuples,
+                  std::vector<std::tuple<int, int, int>> tuples,
                   bd::DataType type)
 {
-  bd::Info() << "Processing raw file.";
+
 
   fs::path rawPath(clo.inFile);
   fs::path tfPath(clo.tfuncPath);
-
 
   int numThreads = clo.numThreads;
   if (numThreads == 0) {
     numThreads = tbb::task_scheduler_init::default_num_threads();
   }
-  tbb::task_scheduler_init init(clo.numThreads);
+  tbb::task_scheduler_init init(numThreads);
 
   bd::Info() << "Computing volume min/max.";
   bd::Volume minmax{ {clo.vol_dims[0], clo.vol_dims[1], clo.vol_dims[2]}, {1, 1, 1} };
@@ -107,6 +106,7 @@ generateIndexFile(const CommandLineOptions &clo,
   bool skipRmap{ clo.skipRmapGeneration };
   for (auto &t : tuples) {
     std::unique_ptr<bd::IndexFile> indexFile{ new bd::IndexFile() };
+//    indexFile->setVolume(minmax);
     indexFile->getVolume().voxelDims(minmax.voxelDims());
     indexFile->getVolume().block_count({ std::get<0>(t), std::get<1>(t), std::get<2>(t) });
     indexFile->getVolume().min(minmax.min());
@@ -117,20 +117,20 @@ generateIndexFile(const CommandLineOptions &clo,
     indexFile->setTFFileName(tfPath.filename().string());
     indexFile->init(type);
 
+    bd::Info() << "Processing raw file.";
     RFProc<Ty> proc;
-    int result = proc.processRawFile(clo,
-                                     indexFile->getVolume(),
-                                     indexFile->getFileBlocks(),
-                                     skipRmap);
+    int const result{ 
+      proc.processRawFile(clo, indexFile->getVolume(), indexFile->getFileBlocks(), skipRmap) };
+    
     if (result != 0) {
       throw std::runtime_error("Problem processing raw file.");
     }
 
-
-    bd::Info() << "Processing relevance map.";
+    std::cout << "Processing relevance map.";
+    //    bd::Info() << "Processing relevance map.";
     processRelMap(clo, indexFile->getVolume(), indexFile->getFileBlocks());
 
-    writeIndexFileToDisk(*( indexFile.get()), makeFileNameString(clo, t), clo);
+    writeIndexFileToDisk(*(indexFile.get()), makeFileNameString(clo, t), clo);
 
     // we only need to write the Rmap one time, but we will keep processing it
     // for each iteration where we have a different block count.
@@ -140,7 +140,7 @@ generateIndexFile(const CommandLineOptions &clo,
 }
 
 bool
-makeNumBlocksTuples(std::vector<std::tuple<int,int,int>> &tups,
+makeNumBlocksTuples(std::vector<std::tuple<int, int, int>> &tups,
                     std::vector<std::string> const &strs)
 {
   if (strs.size() == 0) {
@@ -185,7 +185,7 @@ generate(CommandLineOptions &clo)
 
   }
 
-  std::vector<std::tuple<int,int,int>> tuples;
+  std::vector<std::tuple<int, int, int>> tuples;
   makeNumBlocksTuples(tuples, clo.numBlocks);
 
   // Decide what data type we have and call generateIndexFile() to kick off the processing.
@@ -193,21 +193,21 @@ generate(CommandLineOptions &clo)
 
   switch (type) {
 
-    case bd::DataType::UnsignedCharacter:
-      preproc::generateIndexFile<unsigned char>(clo, tuples, type);
-      break;
+  case bd::DataType::UnsignedCharacter:
+    preproc::generateIndexFile<unsigned char>(clo, tuples, type);
+    break;
 
-    case bd::DataType::UnsignedShort:
-      preproc::generateIndexFile<unsigned short>(clo, tuples, type);
-      break;
+  case bd::DataType::UnsignedShort:
+    preproc::generateIndexFile<unsigned short>(clo, tuples, type);
+    break;
 
-    case bd::DataType::Float:
-      preproc::generateIndexFile<float>(clo, tuples, type);
-      break;
+  case bd::DataType::Float:
+    preproc::generateIndexFile<float>(clo, tuples, type);
+    break;
 
-    default:
-      bd::Err() << "Unsupported/unknown datatype: " << clo.dataType << ".\n Exiting...";
-      break;
+  default:
+    bd::Err() << "Unsupported/unknown datatype: " << clo.dataType << ".\n Exiting...";
+    break;
 
   }
 }
@@ -227,13 +227,14 @@ convert(CommandLineOptions &clo)
     // Print blocks in json format to standard out.
     index->writeAsciiIndexFile(std::cout);
 
-  } else {
+  }
+  else {
 
     // Otherwise, just write the blocks to a json text file.
     // We can't use makeFileNameString() because we want to use the binary file's name.
 
     auto startName = clo.inFile.rfind('/') + 1;
-    auto endName = startName + ( clo.inFile.size() - clo.inFile.rfind('.'));
+    auto endName = startName + (clo.inFile.size() - clo.inFile.rfind('.'));
 
     std::string name(clo.inFile, startName, endName);
     name += ".json";
@@ -264,18 +265,18 @@ try
 
   switch (clo.actionType) {
 
-    case preproc::ActionType::Generate:
-      preproc::generate(clo);
-      break;
+  case preproc::ActionType::Generate:
+    preproc::generate(clo);
+    break;
 
-    case preproc::ActionType::Convert:
-      preproc::convert(clo);
-      break;
+  case preproc::ActionType::Convert:
+    preproc::convert(clo);
+    break;
 
-    default:
-      Err() << "Provide an action. Use -h for help.";
-      bd::logger::shutdown();
-      return 1;
+  default:
+    Err() << "Provide an action. Use -h for help.";
+    bd::logger::shutdown();
+    return 1;
   }
 
   bd::logger::shutdown();

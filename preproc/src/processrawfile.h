@@ -195,8 +195,8 @@ RFProc<Ty>::processRawFile(CommandLineOptions const &clo,
                            std::vector<bd::FileBlock> &blocks,
                            bool skipRMap)
 {
-  preproc::Outputer outputer;
-  outputer.start();
+//  preproc::Outputer outputer;
+//  outputer.start();
 
   try {
     // The relevance map is stored in pre-allocated vector.
@@ -274,8 +274,8 @@ RFProc<Ty>::processRawFile(CommandLineOptions const &clo,
     Reader<Ty>::start(m_reader, m_rawfile);
 
     // set up the VoxelOpacityFunction
-    preproc::VoxelOpacityFunction<Ty>
-        rel_func{ tr_func, volume.min(), volume.max() };
+    preproc::VoxelOpacityFunction<Ty> rel_func{ 
+      tr_func, volume.min(), volume.max() };
 
     loop(skipRMap, volume, blocks, rel_func);
 
@@ -315,7 +315,7 @@ void
 RFProc<Ty>::loop(bool skipRMap,
                  bd::Volume const &volume,
                  std::vector<bd::FileBlock> &blocks,
-                  preproc::VoxelOpacityFunction<Ty> &relFunc)
+                 preproc::VoxelOpacityFunction<Ty> &relFunc)
 {
 
   bd::Info() << "Begin raw file processing, skip_rmap = " << std::boolalpha << skipRMap;
@@ -357,14 +357,13 @@ RFProc<Ty>::genRMapData(bd::Buffer<Ty> *rawData,
   }
 
 //  createRelMap(rawData, rmapData, relFunc);
-  using Relevance = bd::ParallelForVoxelRelevance<Ty,
-      preproc::VoxelOpacityFunction<Ty>, double *>;
 
   // The voxel classifier uses the opacity function to write the
   // opacity to the rmap.
   double *rmapPtr{ rmapData->getPtr() };
+  using Relevance = bd::ParallelForVoxelRelevance<Ty, preproc::VoxelOpacityFunction<Ty>, double *>;
   Relevance relevance{ rmapPtr, rawData, relFunc };
-
+  
   // Process this buffer in parallel with the classifier
   tbb::blocked_range<size_t> range{ 0, rawData->getNumElements() };
   tbb::parallel_for(range, relevance);
