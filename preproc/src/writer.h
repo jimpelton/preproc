@@ -78,9 +78,9 @@ public:
 
       os.write(reinterpret_cast<char *>(buf->getPtr()), buf->getNumElements() * sizeof(Ty));
 
-      DataWrittenMessage *m = new DataWrittenMessage;
-      m->Amount = buf->getNumElements() * sizeof(Ty);
-      Broker::send(m);
+//      DataWrittenMessage *m = new DataWrittenMessage;
+//      m->Amount = buf->getNumElements() * sizeof(Ty);
+//      Broker::send(m);
 
       buf->setNumElements(0);
 

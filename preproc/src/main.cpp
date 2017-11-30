@@ -89,7 +89,6 @@ generateIndexFile(const CommandLineOptions &clo,
                   bd::DataType type)
 {
 
-
   fs::path rawPath(clo.inFile);
   fs::path tfPath(clo.tfuncPath);
 
@@ -106,28 +105,30 @@ generateIndexFile(const CommandLineOptions &clo,
   bool skipRmap{ clo.skipRmapGeneration };
   for (auto &t : tuples) {
     std::unique_ptr<bd::IndexFile> indexFile{ new bd::IndexFile() };
-//    indexFile->setVolume(minmax);
-    indexFile->getVolume().voxelDims(minmax.voxelDims());
-    indexFile->getVolume().block_count({ std::get<0>(t), std::get<1>(t), std::get<2>(t) });
+    
+    indexFile->setRawFileName(rawPath.filename().string());
+    indexFile->setTFFileName(tfPath.filename().string());
+
+    indexFile->setVolume(bd::Volume{ { clo.vol_dims[0], clo.vol_dims[1], clo.vol_dims[2] },
+      { std::get<0>(t), std::get<1>(t), std::get<2>(t) } });
+    
     indexFile->getVolume().min(minmax.min());
     indexFile->getVolume().max(minmax.max());
     indexFile->getVolume().avg(minmax.avg());
     indexFile->getVolume().total(minmax.total());
-    indexFile->setRawFileName(rawPath.filename().string());
-    indexFile->setTFFileName(tfPath.filename().string());
+    
     indexFile->init(type);
 
     bd::Info() << "Processing raw file.";
     RFProc<Ty> proc;
-    int const result{ 
-      proc.processRawFile(clo, indexFile->getVolume(), indexFile->getFileBlocks(), skipRmap) };
+    int result = proc.processRawFile(clo, indexFile->getVolume(), 
+                                 indexFile->getFileBlocks(), skipRmap);
     
     if (result != 0) {
       throw std::runtime_error("Problem processing raw file.");
     }
 
-    std::cout << "Processing relevance map.";
-    //    bd::Info() << "Processing relevance map.";
+    bd::Info() << "Processing relevance map.";
     processRelMap(clo, indexFile->getVolume(), indexFile->getFileBlocks());
 
     writeIndexFileToDisk(*(indexFile.get()), makeFileNameString(clo, t), clo);

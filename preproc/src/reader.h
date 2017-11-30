@@ -71,14 +71,19 @@ public:
         break;
       }
 
-      is.read(reinterpret_cast<char *>(buf->getPtr()),
-              buf->getMaxNumElements() * sizeof(Ty));
+      is.read(reinterpret_cast<char *>(buf->getPtr()), buf->getMaxNumElements() * sizeof(Ty));
 
       std::streamsize amount{ is.gcount() };
+      if (amount == 0) {
+        bd::Info() << "Read 0 bytes from file, exiting reader loop.";
+        break;
+      }
+      
+      bytes_read += amount;
 
-      DataReadMessage *m{ new DataReadMessage };
-      m->Amount = amount;
-      Broker::send(m);
+//      DataReadMessage *m{ new DataReadMessage };
+//      m->Amount = amount;
+//      Broker::send(m);
 
       buf->setNumElements(amount / sizeof(Ty));
       buf->setIndexOffset(bytes_read / sizeof(Ty));
@@ -92,7 +97,8 @@ public:
     }
 
     bd::Info() << "Reader loop finished.";
-
+    
+    // push an empty buffer to the full queue so the consumer of that queue will quit.
     m_full->push(new bd::Buffer<Ty>(nullptr, 0));
 
     return bytes_read;

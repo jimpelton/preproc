@@ -26,10 +26,10 @@ public:
 
 virtual ~Outputer()
 {
-  shouldExit=true;
-//  m_semathing.signal();
-//  m_future.wait();
   Broker::removeRecipient(this);
+  shouldExit=true;
+  m_semathing.signal();
+  m_future.wait();
 }
 
 
@@ -84,6 +84,7 @@ private:
       }
       std::cout << std::flush;
     }
+    std::cout << std::flush;
     bd::Info() << "Exiting print loop in Outputer.";
   }
 

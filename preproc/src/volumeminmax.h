@@ -44,7 +44,6 @@ volumeMinMax(std::string const & path,
   bd::Info() << "Begin min/max computation.";
 
   bd::Buffer<Ty> *buf{ nullptr };
-  
   while ((buf = r.waitNextFullUntilNone()) != nullptr) {
 
     tbb::blocked_range<size_t> range(0, buf->getNumElements());

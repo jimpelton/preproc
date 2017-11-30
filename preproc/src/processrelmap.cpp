@@ -55,14 +55,16 @@ namespace
 
 
 ///////////////////////////////////////////////////////////////////////////////
-///
-/// \param buf
-/// \param clo
-/// \param volume
+/// parallelSumBlockRelevances is executed once for each buffer. Each time its
+/// executed it computes the ROV for the blocks associated with the buffer then
+/// updates each block in the \c blocks vector.
+/// 
+/// \param buf the buffer to process
+/// \param clo the command line options (unused)
+/// \param volume 
 /// \param blocks
 void
 parallelSumBlockRelevances(bd::Buffer<double> const *buf,
-                           CommandLineOptions const &clo,
                            bd::Volume &volume,
                            std::vector<bd::FileBlock> &blocks)
 {
@@ -98,16 +100,14 @@ processRelMap(CommandLineOptions const &clo,
   }
   r.start();
 
-//  tbb::task_scheduler_init init(clo.numThreads);
-
-  // In parallel compute block statistics based on the RMap values.
+  // In parallel, compute block statistics based on the RMap values.
+  // This loop runs for each buffer filled from the rmap file.
   bd::Buffer<double> *buf{ nullptr };
-
   while ((buf = r.waitNextFullUntilNone()) != nullptr) {
 
 //    parallelCountBlockEmptyVoxels(buf, clo, volume, blocks);
 
-    parallelSumBlockRelevances(buf, clo, volume, blocks);
+    parallelSumBlockRelevances(buf, volume, blocks);
 
     r.waitReturnEmpty(buf);
   }

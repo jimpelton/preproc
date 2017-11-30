@@ -48,6 +48,7 @@ parallelBlockMinMax(bd::Volume const &volume,
   tbb::blocked_range<size_t> range{ 0, rawData->getNumElements() };
   tbb::parallel_reduce(range, minMax);
   bd::MinMaxPairDouble const *pairs{ minMax.pairs() };
+
   for (size_t i{ 0 }; i < blocks.size(); ++i) {
     bd::FileBlock *b = &blocks[i];
 
@@ -165,9 +166,8 @@ public:
 private:
 
   bool
-  genRMapData(bd::Buffer<Ty> *rawData,
-              preproc::VoxelOpacityFunction<Ty> &relFunc,
-              bool no_rmap_buffs);
+  genRMapData(bd::Buffer<Ty>* rawData,
+              preproc::VoxelOpacityFunction<Ty>& relFunc);
 
 
   std::ofstream m_rmapfile;
@@ -216,7 +216,8 @@ RFProc<Ty>::processRawFile(CommandLineOptions const &clo,
 
     m_mem = new char[clo.bufferSize];
     {
-      size_t const num_rmap{ 16 };
+      size_t const num_rmap{ 4 };
+      
       double ratio{ 0.0 };
       if (sizeof(Ty) == sizeof(double)) {
         ratio = 0.5;
@@ -225,9 +226,10 @@ RFProc<Ty>::processRawFile(CommandLineOptions const &clo,
       }
 
 
-      // total bytes dedicated to raw buffers.
+      // total bytes dedicated to buffers for the raw file data
+      // is a portion of the entire buffer size.
       size_t const sz_total_raw{ size_t(clo.bufferSize * ratio) };
-      // total smapce dedicated to rmap buffers.
+      // total space dedicated to rmap buffers is the remaining space.
       size_t const sz_total_rmap{ clo.bufferSize - sz_total_raw };
       // how long is each buffer? It is based off of the number of rmap buffers
       // and the space allocated to rmap buffers.
@@ -333,7 +335,7 @@ RFProc<Ty>::loop(bool skipRMap,
     parallelBlockMinMax(volume, blocks, rawData);
 
     if (!skipRMap) {
-      genRMapData(rawData, relFunc, false);
+      genRMapData(rawData, relFunc);
     }
 
     m_rawEmpty.push(rawData);
@@ -346,8 +348,7 @@ RFProc<Ty>::loop(bool skipRMap,
 template<class Ty>
 bool
 RFProc<Ty>::genRMapData(bd::Buffer<Ty> *rawData,
-                        preproc::VoxelOpacityFunction<Ty> &relFunc,
-                        bool no_rmap_buffs)
+                        preproc::VoxelOpacityFunction<Ty> &relFunc)
 {
   bd::Buffer<double> *rmapData{ nullptr };
   rmapData = m_rmapEmpty.pop();
