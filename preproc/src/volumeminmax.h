@@ -1,15 +1,14 @@
 #ifndef preproc_volumeminmax
 #define preproc_volumeminmax
 
+#include "parallel/parallelreduce_minmax.h"
 
 #include <bd/io/buffer.h>
 #include <bd/io/bufferedreader.h>
 #include <bd/log/logger.h>
-#include <bd/tbb/parallelreduce_minmax.h>
 #include <bd/volume/volume.h>
 
 #include <tbb/tbb.h>
-#include <tbb/task_scheduler_init.h>
 
 #include <string>
 
@@ -56,11 +55,7 @@ volumeMinMax(std::string const & path,
     if (min > mm.min_value)
       min = mm.min_value;
 
-    if (total > 0.0) {
-      total += mm.tot_value;
-    } else {
-      total = mm.tot_value;
-    }
+    total += mm.tot_value;
 
     r.waitReturnEmpty(buf);
 

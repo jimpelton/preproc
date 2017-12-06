@@ -140,6 +140,14 @@ generateIndexFile(const CommandLineOptions &clo,
   } // for(auto &t...
 }
 
+
+/// \brief Generate tuples with number of blocks in the X, Y, and Z dimensions.
+/// Each string in the strs parameter is from an occurance of the -D
+/// command line option.
+///
+/// The strings in strs are 3-tuples of the form:
+///     XxYxZ, or X,Y,Z. 
+/// Where X, Y, and Z are the number of blocks in each dimension.
 bool
 makeNumBlocksTuples(std::vector<std::tuple<int, int, int>> &tups,
                     std::vector<std::string> const &strs)

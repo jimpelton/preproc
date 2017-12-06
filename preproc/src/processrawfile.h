@@ -1,19 +1,20 @@
 //
 // Created by Jim Pelton on 10/3/16.
 //
-
+#ifndef preproc_processrawfile_h__
+#define preproc_processrawfile_h__
 
 #include "cmdline.h"
 #include "voxelopacityfunction.h"
 #include "reader.h"
 #include "writer.h"
 #include "outputer.h"
+#include "parallel/parallelreduce_blockminmax.h"
+#include "parallel/parallelfor_voxelrelevance.h"
 
 #include <bd/io/indexfile.h>
 #include <bd/log/logger.h>
-#include <bd/tbb/parallelfor_voxelrelevance.h>
 #include <bd/volume/transferfunction.h>
-#include <bd/tbb/parallelreduce_blockminmax.h>
 #include <bd/io/bufferpool.h>
 #include <bd/io/buffer.h>
 #include <bd/datastructure/blockingqueue.h>
@@ -43,11 +44,11 @@ parallelBlockMinMax(bd::Volume const &volume,
                     std::vector<bd::FileBlock> &blocks,
                     bd::Buffer<Ty> const *rawData)
 {
-  bd::ParallelReduceBlockMinMax<Ty> minMax{ &volume, rawData };
+  ParallelReduceBlockMinMax<Ty> minMax{ &volume, rawData };
 
   tbb::blocked_range<size_t> range{ 0, rawData->getNumElements() };
   tbb::parallel_reduce(range, minMax);
-  bd::MinMaxPairDouble const *pairs{ minMax.pairs() };
+  MinMaxPairDouble const *pairs{ minMax.pairs() };
 
   for (size_t i{ 0 }; i < blocks.size(); ++i) {
     bd::FileBlock *b = &blocks[i];
@@ -362,7 +363,7 @@ RFProc<Ty>::genRMapData(bd::Buffer<Ty> *rawData,
   // The voxel classifier uses the opacity function to write the
   // opacity to the rmap.
   double *rmapPtr{ rmapData->getPtr() };
-  using Relevance = bd::ParallelForVoxelRelevance<Ty, preproc::VoxelOpacityFunction<Ty>, double *>;
+  using Relevance = ParallelForVoxelRelevance<Ty, preproc::VoxelOpacityFunction<Ty>, double *>;
   Relevance relevance{ rmapPtr, rawData, relFunc };
   
   // Process this buffer in parallel with the classifier
@@ -377,3 +378,8 @@ RFProc<Ty>::genRMapData(bd::Buffer<Ty> *rawData,
 
 
 } // namespace preproc
+
+
+
+#endif
+

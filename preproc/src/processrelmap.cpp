@@ -3,9 +3,10 @@
 //
 
 #include "processrelmap.h"
+#include "parallel/parallelreduce_blockempties.h"
+#include "parallel/parallelreduce_blockrov.h"
+
 #include <bd/io/bufferedreader.h>
-#include <bd/tbb/parallelreduce_blockempties.h>
-#include <bd/tbb/parallelreduce_blockrov.h>
 
 #include <tbb/tbb.h>
 #include <tbb/task_scheduler_init.h>
@@ -60,7 +61,6 @@ namespace
 /// updates each block in the \c blocks vector.
 /// 
 /// \param buf the buffer to process
-/// \param clo the command line options (unused)
 /// \param volume 
 /// \param blocks
 void
@@ -69,7 +69,7 @@ parallelSumBlockRelevances(bd::Buffer<double> const *buf,
                            std::vector<bd::FileBlock> &blocks)
 {
 
-  bd::ParallelReduceBlockRov rov{ buf, &volume };
+  ParallelReduceBlockRov rov{ buf, &volume };
   tbb::blocked_range<size_t> range{ 0, buf->getNumElements() };
   tbb::parallel_reduce(range, rov);
 
@@ -116,8 +116,8 @@ processRelMap(CommandLineOptions const &clo,
   // compute the block relevance as a ratio of
   for (auto &b : blocks) {
     uint64_t const totalvox{ b.voxel_dims[0] * b.voxel_dims[1] * b.voxel_dims[2] };
-    assert(totalvox > 0);
-    b.rov /= double(totalvox); //double(b.empty_voxels);
+    if (totalvox != 0)
+      b.rov /= double(totalvox); //double(b.empty_voxels);
   }
 
 //  std::for_each(blocks.begin(),
