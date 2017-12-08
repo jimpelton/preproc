@@ -7,9 +7,8 @@
 #include <tbb/blocked_range.h>
 
 #include <limits>
-#include <functional>
 
-namespace bd
+namespace preproc
 {
 
 /// \brief Simply compute the min/max of the given blocked_range.
@@ -20,7 +19,7 @@ class ParallelReduceMinMax
 public:
 
   ////////////////////////////////////////////////////////////////////////////////
-  ParallelReduceMinMax(const Buffer<Ty>* b /*, const std::function<bool(Ty)> &isRelevant*/)
+  ParallelReduceMinMax(const bd::Buffer<Ty>* b /*, const std::function<bool(Ty)> &isRelevant*/)
     : min_value{ std::numeric_limits<Ty>::max() }
     , max_value{ std::numeric_limits<Ty>::lowest() }
     , tot_value{ 0.0 }
@@ -31,8 +30,8 @@ public:
 
   ////////////////////////////////////////////////////////////////////////////////
   ParallelReduceMinMax(ParallelReduceMinMax& x, tbb::split)
-    : min_value{ std::numeric_limits<Ty>::max() }
-    , max_value{ std::numeric_limits<Ty>::lowest() }
+    : min_value{ x.min_value }
+    , max_value{ x.max_value }
     , tot_value{ x.tot_value }
     , data{ x.data }
   {

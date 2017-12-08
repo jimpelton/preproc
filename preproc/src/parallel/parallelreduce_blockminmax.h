@@ -17,7 +17,7 @@ public:
   MinMaxTotalPair()
     : min{ std::numeric_limits<Ty>::max() }
     , max{ std::numeric_limits<Ty>::lowest() }
-    , total{ 0 }
+    , total{ Ty(0) }
   { }
 
   Ty min;
@@ -120,7 +120,9 @@ public:
         // Accumulate block-specific values.
         if (val < b->min) { b->min = val; }
         if (val > b->max) { b->max = val; }
-        b->total += val;
+        b->total = b->total + static_cast<double>(val);
+      } else {
+        bd::Warn() << "Block index out of range: " << bI << ", " << bJ << ", " << bK;
       }
     }
   }

@@ -115,9 +115,8 @@ processRelMap(CommandLineOptions const &clo,
 
   // compute the block relevance as a ratio of
   for (auto &b : blocks) {
-    uint64_t const totalvox{ b.voxel_dims[0] * b.voxel_dims[1] * b.voxel_dims[2] };
-    if (totalvox != 0)
-      b.rov /= double(totalvox); //double(b.empty_voxels);
+    uint64_t totalvox{ b.voxel_dims[0] * b.voxel_dims[1] * b.voxel_dims[2] };
+    b.rov /= double(totalvox); //double(b.empty_voxels);
   }
 
 //  std::for_each(blocks.begin(),

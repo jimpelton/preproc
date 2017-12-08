@@ -24,12 +24,14 @@ public:
   using queue_type = typename bd::BlockingQueue<buffer_type *>;
 
 
+  ////////////////////////////////////////////////////////////////////////////////
   Reader()
       : Reader{ nullptr, nullptr }
   {
   }
 
 
+  ////////////////////////////////////////////////////////////////////////////////
   Reader(bd::BlockingQueue<buffer_type *> *full,
          bd::BlockingQueue<buffer_type *> *empty)
       : m_empty{ empty }
@@ -38,13 +40,13 @@ public:
   }
 
 
+  ////////////////////////////////////////////////////////////////////////////////
   virtual ~Reader()
   {
   }
 
 
-public:
-
+  ////////////////////////////////////////////////////////////////////////////////
   void
   setFull(bd::BlockingQueue<buffer_type *> *full)
   {
@@ -52,6 +54,7 @@ public:
   }
 
 
+  ////////////////////////////////////////////////////////////////////////////////
   void
   setEmpty(bd::BlockingQueue<buffer_type *> *empty)
   {
@@ -59,6 +62,7 @@ public:
   }
 
 
+  ////////////////////////////////////////////////////////////////////////////////
   uint64_t
   operator()(std::istream &is)
   {
@@ -70,31 +74,29 @@ public:
       if (!buf->getPtr()) {
         break;
       }
+      buf->setIndexOffset(bytes_read / sizeof(Ty));
 
       is.read(reinterpret_cast<char *>(buf->getPtr()), buf->getMaxNumElements() * sizeof(Ty));
 
       std::streamsize amount{ is.gcount() };
       if (amount == 0) {
-        bd::Info() << "Read 0 bytes from file, exiting reader loop.";
+        bd::Dbg() << "Read 0 bytes from file, exiting reader loop.";
+        m_empty->push(buf);
         break;
       }
-      
       bytes_read += amount;
+      buf->setNumElements(amount / sizeof(Ty));
+      m_full->push(buf);
 
 //      DataReadMessage *m{ new DataReadMessage };
 //      m->Amount = amount;
 //      Broker::send(m);
 
-      buf->setNumElements(amount / sizeof(Ty));
-      buf->setIndexOffset(bytes_read / sizeof(Ty));
-      m_full->push(buf);
-
       // entire file has been read.
-      if (amount < static_cast<long long>(buf->getMaxNumElements())) {
+      if (buf->getNumElements() < buf->getMaxNumElements()) {
         break;
       }
-
-    }
+    } // while(true
 
     bd::Info() << "Reader loop finished.";
     
@@ -105,6 +107,7 @@ public:
   }
 
 
+  ////////////////////////////////////////////////////////////////////////////////
   static void
   start(Reader &r, std::ifstream &is)
   {
@@ -116,6 +119,7 @@ public:
   }
 
 
+  ////////////////////////////////////////////////////////////////////////////////
   uint64_t
   join()
   {

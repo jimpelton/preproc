@@ -47,7 +47,14 @@ public:
     Ty const * const data{ m_buf->getPtr() };
 
     for(size_t i{ r.begin() }; i != r.end(); ++i) {
-      (*m_map)[i] = m_isRel( data[i] );
+      double val = m_isRel(data[i]);
+
+      if (val != val || std::isnan(val) || std::isinf(val)) {
+        std::cout << "Got a nan!\n";
+//        DebugBreak();
+      }
+
+      (*m_map)[i] = val;
     }
   }
 
