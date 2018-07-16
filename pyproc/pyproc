@@ -1,0 +1,31 @@
+#!/usr/bin/env python
+# encoding: utf-8
+
+import logging
+
+from src import parseargs
+from src import process
+
+# Set up the logger
+logger = logging.getLogger('pydar')
+# Use a console handler, set it to debug by default
+logger_ch = logging.StreamHandler()
+logger.setLevel(logging.INFO)
+log_formatter = logging.Formatter(('%(levelname)s: %(asctime)s %(processName)s:%(process)d'
+                                   ' %(filename)s:%(lineno)s %(module)s::%(funcName)s()'
+                                   ' -- %(message)s'))
+logger_ch.setFormatter(log_formatter)
+logger.addHandler(logger_ch)
+
+
+def main():
+    args = parseargs.parse()
+
+    if args.debug:
+        logger.setLevel(logging.DEBUG)
+
+    p = process.Process(args.filename, dtype=args.dtype, vol_dims=tuple(args.dims))
+    p.process(blocks=(5,5,5))
+
+if __name__ == '__main__':
+    main()
